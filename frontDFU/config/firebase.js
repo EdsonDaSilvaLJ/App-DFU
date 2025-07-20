@@ -1,0 +1,52 @@
+// Import the functions you need from the SDKs you need
+import { initializeApp } from "firebase/app";
+import { getAnalytics } from "firebase/analytics";
+import { getAuth } from "firebase/auth";
+
+// TODO: Add SDKs for Firebase products that you want to use
+// https://firebase.google.com/docs/web/setup#available-libraries
+
+// Your web app's Firebase configuration
+// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+const firebaseConfig = {
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY,
+  authDomain: process.env.REACT_APP_FIREBASE_AUTH_DOMAIN,
+  projectId: process.env.REACT_APP_FIREBASE_PROJECT_ID,
+  storageBucket: process.env.REACT_APP_FIREBASE_STORAGE_BUCKET,
+  messagingSenderId: process.env.REACT_APP_FIREBASE_MESSAGING_SENDER_ID,
+  appId: process.env.REACT_APP_FIREBASE_APP_ID,
+  measurementId: process.env.REACT_APP_FIREBASE_MEASUREMENT_ID
+};
+
+// Inicializa o app do Firebase (conexão firebase e react)
+const app = initializeApp(firebaseConfig);
+
+// (opcional) Analytics, caso precise
+export const auth = getAuth(app);
+//auth é o objeto de autenticação do Firebase, usado para gerenciar usuários autenticados
+// ele pode ser usado para registrar usuários, fazer login, logout, etc. então representa a conexão do Firebase com o React
+// também pode ser usado para obter o token do usuário autenticado, que é necessário para autenticar requisições para o backend ou outros serviços que exigem autenticação do Firebase
+
+
+// Função global para obter o token Firebase do usuário autenticado
+// Esta função pode ser usada em qualquer parte do aplicativo para obter o token do usuário autenticado
+// Ela verifica se o usuário está autenticado e, se sim, retorna o token. Caso contrário, lança um erro.
+// É importante tratar erros ao chamar essa função, pois pode ocorrer um erro se o usuário não estiver autenticado ou se houver problemas ao obter o token.
+// O token é usado para autenticar requisições para o backend ou outros serviços que exigem autenticação do Firebase.
+// A função retorna o token como uma string ou null se ocorrer um erro.
+
+export const getFirebaseToken = async (auth) => {
+  try {
+    const user = auth.currentUser
+    if (user) {
+      const token = await user.getIdToken();
+      return token;
+    } else {
+      throw new Error('Usuário não autenticado');
+    }
+  } catch (error) {
+    console.error('Erro ao obter token:', error);
+    return null;
+  }
+};
+
