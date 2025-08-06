@@ -434,7 +434,7 @@ app.get('/pacientes/:pacienteId/analises', async (req, res) => {
 
 
 // Middleware para capturar rotas não encontradas
-app.use('*', (req, res) => {
+app.use((req, res) => {
     res.status(404).json({
         erro: 'Rota não encontrada',
         message: `A rota ${req.method} ${req.originalUrl} não existe`,
