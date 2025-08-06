@@ -1,216 +1,261 @@
-import { useState } from 'react';
-import { View, TextInput, Button, Alert, StyleSheet, Text, TouchableOpacity } from 'react-native';
-import { Picker } from '@react-native-picker/picker';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { auth } from '../config/firebase';
+import React from 'react';
+import {
+  View,
+  Alert,
+  StyleSheet,
+  KeyboardAvoidingView,
+  ScrollView,
+  Platform,
+} from 'react-native';
 import { useRouter } from 'expo-router';
+import { auth } from '../config/firebase';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { traduzErroLogup } from '../utils/firebaseErros';
+import { ModernTextInput, SelectInput } from '../components/Inputs';
+import { PrimaryButton, SecondaryButton } from '../components/Buttons';
+import RNPickerSelect from 'react-native-picker-select';
+import API_CONFIG, { makeAuthenticatedRequest, buildURL } from '../config/api';
 
+// 1. Importa os hooks necessários do react-hook-form
+import { useForm, Controller } from 'react-hook-form';
 
-// Componente de cadastro para profissionais de saúde
-// Permite que médicos, enfermeiros e outros profissionais se cadastrem com informações específicas
 export default function Logup() {
-  const [nome, setNome] = useState('');
-  const [email, setEmail] = useState('');
-  const [senha, setSenha] = useState('');
-  const [telefone, setTelefone] = useState('');
-  const [cpf, setCpf] = useState(''); // Estado para CPF (opcional)
-  const [tipoProfissional, setTipoProfissional] = useState('');
-  const [crm, setCrm] = useState(''); // Estado para CRM ou COREN
-
+  // 2. Inicializa o hook useForm, substituindo todos os hooks useState
+  const {
+    control,
+    handleSubmit,
+    formState: { errors, isSubmitting },
+    watch, // O 'watch' permite observar o valor de um campo em tempo real
+  } = useForm();
+  
   const router = useRouter();
 
-  const handleSingUp = async () => {
-    if (!nome || !email || !senha || !telefone || !tipoProfissional || !cpf) {
-      Alert.alert('Erro', 'Preencha todos os campos obrigatórios');
-      return;
-    }
+  // 3. A função watch é usada para saber o valor do campo 'tipoProfissional' em tempo real
+  const tipoProfissionalValor = watch('tipoProfissional');
 
-    // Validar CRM para médicos e enfermeiros
-    if ((tipoProfissional === 'medico' || tipoProfissional === 'enfermeiro') && !crm) {
-      Alert.alert('Erro', 'Preencha o registro profissional');
-      return;
-    }
+  // 4. A função de submissão recebe os dados validados como argumento
+  const handleSignup = async (data) => {
+    // Note que as validações manuais não são mais necessárias aqui
+    // Elas são tratadas pelas regras no Controller
 
+    // Lógica para criar o usuário no Firebase
     try {
-      // Criar usuário no Firebase
-      const userCredential = await createUserWithEmailAndPassword(auth, email, senha); //funcao CreateUserWithEmailAndPassword retorna a credential ja
+      // Cria no Firebase
+      const userCred = await createUserWithEmailAndPassword(auth, data.email, data.senha);
+      const token = await userCred.user.getIdToken();
 
-      //qual diferenca de credential e token? A credential é o objeto que contém informações sobre o usuário autenticado, enquanto o token é uma string que representa a sessão do usuário e pode ser usada para autenticação em outras partes do sistema.
+      // Envia à sua API
+      const res = await makeAuthenticatedRequest(
+        buildURL(API_CONFIG.ENDPOINTS.SIGNUP),
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            nome: data.nome,
+            email: data.email,
+            telefone: data.telefone,
+            cpf: data.cpf,
+            tipoProfissional: data.tipoProfissional,
+            crm: data.crm || null,
+          })
+        },
+        token
+      );
+      if (!res.ok) throw new Error('Falha ao salvar no servidor');
 
-      // Obter token do usuário criado
-      const token = await userCredential.user.getIdToken();
-
-      //salvar no banco de dados faço um request para o servidor com as infos
-      const response = await fetch('http://10.13.30.172:3000/logup', {
-      method: 'POST',
-      headers: {
-        'Content-Type' : 'application/json',
-        Authorization: `Bearer ${token}`
-      },
-      body: JSON.stringify({
-        nome,
-        email,
-        telefone,
-        cpf,
-        tipoProfissional,
-        crm: crm || null // Se não tiver CRM, enviar null
-      })
-    });
-
-    // se n der erro mas n for OK exibe
-    // se for ok beleza, segue
-    // se for erro é capturado pois está num try e ai gera interrupção e é capturado pelo catch
-
-    if (!response.ok) {
-      throw new Error('Erro ao salvar dados no servidor');
-    }
-      Alert.alert('Cadastro feito com sucesso!');
+      Alert.alert('Sucesso', 'Cadastro realizado com sucesso!');
       router.replace('/home');
-    } catch (error) {
-      console.log(error.code);
-      Alert.alert('Erro no cadastro', traduzErroLogup(error.code));
+
+    } catch (err) {
+      console.log(err.code || err.message);
+      Alert.alert('Erro no cadastro', traduzErroLogup(err.code || err.message));
     }
   };
 
-
-
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Cadastro Profissional de Saúde</Text>
-
-      {/* Nome Completo */}
-      <TextInput
-        style={styles.input}
-        placeholder="Nome Completo"
-        value={nome}
-        onChangeText={setNome}
-      />
-
-      {/* CPF (opcional) */}
-      <TextInput
-        style={styles.input}
-        placeholder="CPF (opcional)"
-        value={cpf}
-        onChangeText={setCpf}
-        keyboardType="numeric"
-      />
-
-      {/* E-mail */}
-      <TextInput
-        style={styles.input}
-        placeholder="E-mail"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-      />
-
-      {/* Senha */}
-      <TextInput
-        style={styles.input}
-        placeholder="Senha"
-        value={senha}
-        onChangeText={setSenha}
-        secureTextEntry={true}
-      />
-
-      {/* Tipo de Profissional */}
-      <Picker
-        selectedValue={tipoProfissional}
-        style={styles.picker}
-        onValueChange={(itemValue) => setTipoProfissional(itemValue)}>
-        <Picker.Item label="Selecione o tipo de profissional" value="" />
-        <Picker.Item label="Médico" value="medico" />
-        <Picker.Item label="Enfermeiro" value="enfermeiro" />
-        <Picker.Item label="Outro" value="outro" />
-      </Picker>
-
-      {/* Campo de CRM ou COREN */}
-      {(tipoProfissional === 'medico' || tipoProfissional === 'enfermeiro') && (
-        <TextInput
-          style={styles.input}
-          placeholder={tipoProfissional === 'medico' ? 'CRM' : 'COREN'}
-          value={crm}
-          onChangeText={setCrm}
-          keyboardType="numeric"
+    <KeyboardAvoidingView
+      style={styles.flex}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+    >
+      <ScrollView
+        padding={20}
+        marginBottom={25}
+        marginTop={25}
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+      >
+        {/* Usando Controller para cada campo */}
+        <Controller
+          control={control}
+          name="nome"
+          rules={{ required: 'Nome é obrigatório' }}
+          render={({ field: { onChange, value } }) => (
+            <ModernTextInput
+              label="Nome Completo"
+              placeholder="Digite seu nome"
+              value={value}
+              onChangeText={onChange}
+              error={errors.nome?.message}
+            />
+          )}
         />
-      )}
+        <Controller
+          control={control}
+          name="cpf"
+          rules={{ 
+            required: 'CPF é obrigatório',
+            pattern: {
+              value: /^\d{11}$/,
+              message: 'CPF deve conter 11 dígitos'
+            }
+          }}
+          render={({ field: { onChange, value } }) => (
+            <ModernTextInput
+              label="CPF"
+              placeholder="Digite seu CPF"
+              value={value}
+              onChangeText={onChange}
+              keyboardType="numeric"
+              error={errors.cpf?.message}
+            />
+          )}
+        />
+        <Controller
+          control={control}
+          name="email"
+          rules={{ 
+            required: 'E-mail é obrigatório',
+            pattern: {
+              value: /^\S+@\S+$/i,
+              message: 'E-mail inválido'
+            }
+          }}
+          render={({ field: { onChange, value } }) => (
+            <ModernTextInput
+              label="E-mail"
+              placeholder="Digite seu e-mail"
+              value={value}
+              onChangeText={onChange}
+              keyboardType="email-address"
+              error={errors.email?.message}
+            />
+          )}
+        />
+        <Controller
+          control={control}
+          name="senha"
+          rules={{ 
+            required: 'Senha é obrigatória',
+            minLength: {
+              value: 6,
+              message: 'A senha deve ter no mínimo 6 caracteres'
+            }
+          }}
+          render={({ field: { onChange, value } }) => (
+            <ModernTextInput
+              label="Senha"
+              placeholder="Digite sua senha"
+              value={value}
+              onChangeText={onChange}
+              secureTextEntry
+              error={errors.senha?.message}
+            />
+          )}
+        />
 
-      {/* Telefone */}
-      <TextInput
-        style={styles.input}
-        placeholder="Telefone"
-        value={telefone}
-        onChangeText={setTelefone}
-        keyboardType="phone-pad"
-      />
+        {/* Controller para o SelectInput / RNPickerSelect */}
+        <Controller
+          control={control}
+          name="tipoProfissional"
+          rules={{ required: 'O tipo de profissional é obrigatório' }}
+          render={({ field: { onChange, value } }) => (
+            <SelectInput
+              label="Tipo de profissional"
+              value={value}
+              onValueChange={onChange} // onValueChange recebe a função do Controller
+              items={[
+                { label: 'Médico', value: 'medico' },
+                { label: 'Enfermeiro', value: 'enfermeiro' },
+                { label: 'Outro', value: 'outro' },
+              ]}
+              error={errors.tipoProfissional?.message}
+            />
+          )}
+        />
 
-      {/* Botão de Cadastro */}
-      <TouchableOpacity style={styles.button} onPress={handleSingUp}>
-        <Text style={styles.buttonText}>Cadastrar</Text>
-      </TouchableOpacity>
+        {/* Renderiza o campo CRM/COREN condicionalmente com base no valor de 'tipoProfissional' */}
+        {(tipoProfissionalValor === 'medico' || tipoProfissionalValor === 'enfermeiro') && (
+          <Controller
+            control={control}
+            name="crm"
+            rules={{ required: 'O registro profissional é obrigatório' }}
+            render={({ field: { onChange, value } }) => (
+              <ModernTextInput
+                label={tipoProfissionalValor === 'medico' ? 'CRM' : 'COREN'}
+                placeholder={`Digite seu ${tipoProfissionalValor === 'medico' ? 'CRM' : 'COREN'}`}
+                value={value}
+                onChangeText={onChange}
+                keyboardType="numeric"
+                error={errors.crm?.message}
+              />
+            )}
+          />
+        )}
+        <Controller
+          control={control}
+          name="telefone"
+          rules={{ 
+            required: 'Telefone é obrigatório',
+            pattern: {
+              value: /^\d{10,11}$/,
+              message: 'Telefone inválido'
+            }
+          }}
+          render={({ field: { onChange, value } }) => (
+            <ModernTextInput
+              label="Telefone"
+              placeholder="Digite seu telefone"
+              value={value}
+              onChangeText={onChange}
+              keyboardType="phone-pad"
+              error={errors.telefone?.message}
+            />
+          )}
+        />
 
-      {/* Link para Login */}
-      <TouchableOpacity style={styles.loginLink} onPress={() => router.replace('/login')}>
-        <Text style={styles.loginText}>Já tem uma conta? Faça login</Text>
-      </TouchableOpacity>
-    </View>
+        <PrimaryButton
+          title="Cadastrar"
+          onPress={handleSubmit(handleSignup)} // Conecta ao handleSubmit do hook
+          loading={isSubmitting} // isSubmitting substitui o 'loading' do useState
+          disabled={isSubmitting}
+          size="large"
+          style={{ marginTop: 20 }}
+        />
+
+        <SecondaryButton
+          title="Já tenho conta"
+          onPress={() => router.replace('/login')}
+          style={{ marginTop: 12 }}
+        />
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
 
 const styles = StyleSheet.create({
-  container: {
+  flex: {
     flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5', // Cor de fundo clara
-    padding: 20,
+    backgroundColor: '#f5f5f5',
   },
-  title: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 30,
+  container: {
+    paddingVertical: 20,
+    paddingHorizontal: 10,
   },
-  input: {
-    width: '100%',
-    padding: 15,
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 10,
-    fontSize: 16,
-    backgroundColor: '#fff',
-  },
-  picker: {
-    width: '100%',
-    padding: 15,
-    marginBottom: 15,
+  pickerWrapper: {
     borderWidth: 1,
     borderColor: '#ccc',
     borderRadius: 10,
     backgroundColor: '#fff',
-  },
-  button: {
-    backgroundColor: '#007AFF',
-    padding: 15,
-    borderRadius: 10,
-    width: '100%',
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 18,
-  },
-  loginLink: {
-    marginTop: 20,
-    alignItems: 'center',
-  },
-  loginText: {
-    color: '#007AFF',
-    fontWeight: 'bold',
-    fontSize: 16,
+    marginBottom: 15,
   },
 });

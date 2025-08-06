@@ -1,5 +1,46 @@
 const API_CONFIG = {
-  baseURL: process.env.REACT_APP_API_BASE_URL || 'http://localhost:3000/api',
-}
+  BASE_URL:  process.env.REACT_APP_API_BASE_URL || 'http://192.168.0.18:3000',
+  ENDPOINTS: {
+    SIGNUP: '/logup',
+    PACIENTES: "/pacientes",
+    PACIENTE_BY_ID: (id) => `/pacientes/${id}`,
+    UPLOAD_FOTO: '/pacientes/upload-foto',
+    SALVAR_AVALIACAO: "/pacientes/salvar-avaliacao",
+  }
+};
+
+// Função helper para construir URLs completas
+export const buildURL = (endpoint) => {
+  return `${API_CONFIG.BASE_URL}${endpoint}`;
+};
+
+// Função helper para fazer requisições autenticadas
+export const makeAuthenticatedRequest = async (url, options = {}, token) => {
+  const defaultHeaders = {
+    'Content-Type': 'application/json',
+    ...(token && { 'Authorization': `Bearer ${token}` })
+  };
+
+  return fetch(url, {
+    ...options,
+    headers: {
+      ...defaultHeaders,
+      ...options.headers
+    }
+  });
+};
+
+// Função helper para requisições com FormData (upload de arquivos)
+export const makeFormDataRequest = async (url, formData, token) => {
+  return fetch(url, {
+    method: 'POST',
+    headers: {
+      // NÃO definir Content-Type para FormData - o browser faz automaticamente
+      ...(token && { 'Authorization': `Bearer ${token}` })
+    },
+    body: formData
+  });
+};
+
 export default API_CONFIG;
 //ainda n implementado

@@ -11,7 +11,7 @@ export default function Layout() {
         tabBarIcon: ({color}) => (<MaterialIcons name= "add-circle" size={24} color = {color} />)
       }} />
 
-      <Tabs.Screen name="index" options={{ 
+      <Tabs.Screen name="home" options={{ 
         title: '',
         tabBarLabel: ({color}) => (<MaterialIcons name = "list" size={24} color={color} />) }} />
 

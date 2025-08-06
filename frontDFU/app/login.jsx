@@ -1,122 +1,159 @@
-import { useState } from 'react';
-import { View, Text, Alert, TextInput, TouchableOpacity, StyleSheet } from 'react-native';
+// app/login.jsx
+import React, { useState } from 'react';
+import {
+  View,
+  Alert,
+  StyleSheet,
+  KeyboardAvoidingView,
+  ScrollView,
+  Platform,
+  Text
+} from 'react-native';
 import { useRouter } from 'expo-router';
-import { auth } from '../config/firebase'
+import { useForm, Controller } from 'react-hook-form';
+import { auth } from '../config/firebase';
 import { signInWithEmailAndPassword } from 'firebase/auth';
 import { traduzErroLogin } from '../utils/firebaseErros';
+import { ModernTextInput } from '../components/Inputs';
+import { PrimaryButton, SecondaryButton } from '../components/Buttons';
 
 export default function Login() {
+  const [loading, setLoading] = useState(false);
+  const router = useRouter();
 
-  //var
-  const [email, setEmail] = useState('');
-  const [senha, setSenha] = useState('');
-  const router = useRouter(); //criado para ajudar
-
-
-
-  const handleLogin = async () => {
-    if (!email) {
-      Alert.alert('Erro', 'Preencha com seu e-mail');
+  // ⭐ CONFIGURAR useForm
+  const {
+    control,
+    handleSubmit,
+    formState: { errors, isValid },
+    watch,
+    reset
+  } = useForm({
+    mode: 'onChange', // Validação em tempo real
+    defaultValues: {
+      email: '',
+      senha: ''
     }
+  });
 
-    if (!senha) {
-      Alert.alert('Erro', 'Digite sua senha')
-    }
+  // ⭐ OBSERVAR VALORES PARA DESABILITAR BOTÃO
+  const watchEmail = watch('email');
+  const watchSenha = watch('senha');
 
-    try {
-      await signInWithEmailAndPassword(auth, email, senha) // Funçao que tenta logar de acordo com firebase
-      router.replace('/home');
-    } catch (error) {
-      console.log(error.code)
-      Alert.alert('Erro no Login', traduzErroLogin(error.code))
+  // ⭐ REGRAS DE VALIDAÇÃO
+  const emailRules = {
+    required: {
+      value: true,
+      message: 'E-mail é obrigatório'
+    },
+    pattern: {
+      value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+      message: 'E-mail inválido'
     }
   };
 
-  
-  const goToSingUp = () => {
-    router.replace('/logup')
-  }
+  const senhaRules = {
+    required: {
+      value: true,
+      message: 'Senha é obrigatória'
+    },
+    minLength: {
+      value: 6,
+      message: 'Senha deve ter pelo menos 6 caracteres'
+    }
+  };
 
+  // ⭐ FUNÇÃO DE LOGIN (chamada pelo handleSubmit)
+  const onSubmit = async (data) => {
+    setLoading(true);
+    try {
+      await signInWithEmailAndPassword(auth, data.email, data.senha);
+      reset(); // Limpar formulário após sucesso
+      router.replace('/(tabs)/home');
+    } catch (err) {
+      Alert.alert('Erro no Login', traduzErroLogin(err.code));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const goToSignUp = () => router.replace('/logup');
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Login</Text>
+    <KeyboardAvoidingView
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 20}
+      style={{ justifyContent: 'center', flex: 1 }}
+    >
+      <ScrollView
+        keyboardShouldPersistTaps="always"
+        bounces={false}
+        contentContainerStyle={{ padding: 30, flexGrow: 1, justifyContent: 'center' }}
+      >
+        <View style={{
+          marginVertical: 10, justifyContent: 'space-around' }}>
+          {/* ⭐ CAMPO E-MAIL COM CONTROLLER */}
+          <Controller
+            control={control}
+            name="email"
+            rules={emailRules}
+            render={({ field: { onChange, onBlur, value } }) => (
+              <ModernTextInput
+                label="E-mail"
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                placeholder="Digite seu e-mail"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
+                error={errors.email?.message}
+                returnKeyType="next"
+              />
+            )}
+          />
 
-      {/* Campo de e-mail */}
-      <TextInput
-        style={styles.input}
-        placeholder="E-mail"
-        value={email}
-        onChangeText={setEmail}
-        keyboardType="email-address"
-      />
+          {/* ⭐ CAMPO SENHA COM CONTROLLER */}
+          <Controller
+            control={control}
+            name="senha"
+            rules={senhaRules}
+            render={({ field: { onChange, onBlur, value } }) => (
+              <ModernTextInput
+                label="Senha"
+                value={value}
+                onChangeText={onChange}
+                onBlur={onBlur}
+                placeholder="Digite sua senha"
+                secureTextEntry
+                error={errors.senha?.message}
+                returnKeyType="done"
+                onSubmitEditing={handleSubmit(onSubmit)} // ⭐ ENTER FAZ LOGIN
+              />
+            )}
+          />
+        </View>
 
-      {/* Campo de senha */}
-      <TextInput
-        style={styles.input}
-        placeholder="Senha"
-        value={senha}
-        onChangeText={setSenha}
-        secureTextEntry
-      />
+        <View style={{ marginVertical: 10 , justifyContent: 'center'}}>
+          {/* ⭐ BOTÃO USA handleSubmit */}
+          <PrimaryButton
+            style={{ marginVertical: 20 }}
+            title="Login"
+            onPress={handleSubmit(onSubmit)}
+            loading={loading}
+            disabled={!watchEmail?.trim() || !watchSenha || loading}
+            icon="login"
+            size="large"
+          />
 
-      {/* Botão de login */}
-      <TouchableOpacity style={styles.button} onPress={handleLogin}>
-        <Text style={styles.buttonText}>Entrar</Text>
-      </TouchableOpacity>
-
-      {/* Botão de cadastro */}
-      <TouchableOpacity style={styles.registerButton} onPress={goToSingUp}>
-        <Text style={styles.registerText}>Realizar cadastro</Text>
-      </TouchableOpacity>
-    </View>
+          <SecondaryButton
+            style={{ marginVertical: 10 }}
+            title="Criar conta"
+            onPress={goToSignUp}
+            disabled={loading}
+          />
+        </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#f5f5f5',
-    padding: 20,
-  },
-  title: {
-    fontSize: 30,
-    fontWeight: 'bold',
-    color: '#333',
-    marginBottom: 40,
-  },
-  input: {
-    width: '100%',
-    padding: 15,
-    marginBottom: 15,
-    borderWidth: 1,
-    borderColor: '#ccc',
-    borderRadius: 10,
-    fontSize: 16,
-    backgroundColor: '#fff',
-  },
-  button: {
-    width: '100%',
-    padding: 15,
-    backgroundColor: '#007AFF',
-    borderRadius: 10,
-    alignItems: 'center',
-    marginTop: 10,
-  },
-  buttonText: {
-    color: '#fff',
-    fontWeight: 'bold',
-    fontSize: 18,
-  },
-  registerButton: {
-    marginTop: 20,
-    alignItems: 'center',
-  },
-  registerText: {
-    color: '#007AFF',
-    fontWeight: 'bold',
-    fontSize: 16,
-  },
-});

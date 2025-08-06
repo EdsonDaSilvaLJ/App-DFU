@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../config/firebase'; // Sua configuração do Firebase
-import { ActivityIndicator, View, StyleSheet, Image } from 'react-native';
+import { ActivityIndicator, View, StyleSheet, Image, Text} from 'react-native';
 import { Redirect } from 'expo-router';
+import {LoadingInit} from '../components/LoadingStates'; // Componente de loading
 
 export default function Index() {
   const [user, setUser] = useState(null);
@@ -19,21 +20,13 @@ export default function Index() {
   }, []);
 
 
-
-  if (loading) {
-    return (
-      <View style={styles.loadingContainer}>
-
-        <Image 
-          source = {require('../assets/images/LIMCIsemFundo.png')}
-          style = {styles.logo}
-        />
-        <ActivityIndicator size="large" color="#444444" />
-
-      </View>
-    );
-  }
-
+if (loading) {
+  return (
+    <View style={{flex:1,justifyContent:'center',alignItems:'center'}}>
+      <Text>LOADING...</Text>
+    </View>
+  );
+}
 
   if (user) {
     return <Redirect href="/home" />;

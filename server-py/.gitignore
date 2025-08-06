@@ -1,0 +1,50 @@
+# Dependencies
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# ⭐ ARQUIVOS SENSÍVEIS
+.env
+.env.*
+*.env
+
+# ⭐ MODELOS DE IA (ARQUIVOS GRANDES!)
+models-ia/
+*.h5
+*.pt
+*.pkl
+*.joblib
+*.model
+*.weights
+*.onnx
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+
+# FastAPI cache
+.pytest_cache/
+htmlcov/
+.coverage
+
