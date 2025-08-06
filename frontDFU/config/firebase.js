@@ -44,7 +44,8 @@ const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 //auth é o objeto de autenticação do Firebase, usado para gerenciar usuários autenticados
 // ele pode ser usado para registrar usuários, fazer login, logout, etc. então representa a conexão do Firebase com o React
-// também pode ser usado para obter o token do usuário autenticado, que é necessário para autenticar requisições para o backend ou outros serviços que exigem autenticação do Firebase
+// também pode ser usado para obter o token do usuário autenticado, que é necessário para autenticar requisições para o backend 
+// ou outros serviços que exigem autenticação do Firebase
 
 
 // Função global para obter o token Firebase do usuário autenticado

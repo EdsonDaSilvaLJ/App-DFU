@@ -6,7 +6,7 @@ const { bucket } = require('./config/firebase');
 
 // Importar modelos
 const Analise = require('./models/Analise');
-const Medico = require('./models/Medico');
+const Profissional = require('./models/Profissional');
 const Paciente = require('./models/Paciente');
 
 // Carrega as variáveis de ambiente do arquivo .env
@@ -227,7 +227,7 @@ app.post('/api/save-analysis', express.json(), async (req, res) => {
         console.log('--- Etapa 3: Salvando Análise ---');
         
         // ⭐ BUSCAR MÉDICO PELO UID DO FIREBASE
-        const medico = await Medico.findOne({ firebaseUid: medico_id });
+        const medico = await Profissional.findOne({ firebaseUid: medico_id });
         if (!medico) {
             return res.status(404).json({
                 success: false,

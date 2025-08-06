@@ -33,4 +33,4 @@ COPY . .
 EXPOSE $PORT
 
 # Comando para iniciar a aplicação
-CMD uvicorn main:app --host 0.0.0.0 --port $PORT
+CMD uvicorn api_ia:app --host 0.0.0.0 --port $PORT

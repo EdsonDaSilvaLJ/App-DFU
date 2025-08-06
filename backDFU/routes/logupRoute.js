@@ -16,7 +16,7 @@ router.post('/', autenticarFirebase, async (req, res) => {
       tipoProfissional,
       cpf,
       crm,
-      userId: req.userId // UID do Firebase
+      firebaseUid: req.firebaseUid // UID do Firebase
     });
 
     await novoProfissional.save();

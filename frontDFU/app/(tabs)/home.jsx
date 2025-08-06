@@ -1,9 +1,9 @@
 // app/(tabs)/home.jsx
 import React, { useState, useEffect } from 'react';
-import { 
-  SafeAreaView, 
-  View, 
-  StyleSheet, 
+import {
+  SafeAreaView,
+  View,
+  StyleSheet,
   FlatList,
   RefreshControl
 } from 'react-native';
@@ -11,6 +11,7 @@ import { useRouter } from 'expo-router';
 import { auth, getFirebaseToken } from '../../config/firebase';
 import { onAuthStateChanged } from 'firebase/auth';
 import { COLORS, SPACING } from '../../constants/Colors';
+import API_CONFIG, { buildURL } from '../../config/api';
 
 // ⭐ IMPORTAR COMPONENTES MODERNOS
 import { SearchBar } from '../../components/Inputs';
@@ -31,9 +32,12 @@ export default function Home() {
   const buscarPacientes = async () => {
     try {
       const token = await getFirebaseToken(auth);
-      const res = await fetch('http://192.168.0.18:3000/pacientes', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await fetch(
+        buildURL(API_CONFIG.ENDPOINTS.PACIENTES),
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
       if (!res.ok) throw new Error(`Status ${res.status}`);
       const data = await res.json();
       setPacientesTotais(data);
@@ -93,7 +97,7 @@ export default function Home() {
   return (
     <SafeAreaView style={styles.container}>
       {/* ⭐ HEADER MODERNO */}
-      <PageHeader 
+      <PageHeader
         title="Meus Pacientes"
         actions={[
           {
@@ -112,8 +116,8 @@ export default function Home() {
         />
 
         {/* ⭐ SEÇÃO COM CONTADOR */}
-        <SectionHeader 
-          title="Pacientes" 
+        <SectionHeader
+          title="Pacientes"
           count={pacientesFiltrados.length}
         />
 
@@ -146,7 +150,7 @@ export default function Home() {
         )}
       </View>
       {/* ⭐ BOTÃO FLUTUANTE MODERNO */}
-      <FloatingActionButton 
+      <FloatingActionButton
         onPress={navegarCadastro}
         icon="person-add"
       />

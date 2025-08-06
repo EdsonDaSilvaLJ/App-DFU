@@ -9,7 +9,7 @@ const Analise = require('../models/Analise');
 // ⭐ MIDDLEWARE PARA BUSCAR PROFISSIONAL
 async function buscarProfissional(req, res, next) {
   try {
-    const profissional = await Profissional.findOne({ firebaseUid: req.userId });
+    const profissional = await Profissional.findOne({ firebaseUid: req.firebaseUid });
     if (!profissional) {
       return res.status(404).json({ 
         erro: 'Profissional não encontrado',
