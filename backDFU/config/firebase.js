@@ -16,6 +16,12 @@ const serviceAcount = {
 };
 
 
+if (!process.env.FIREBASE_PRIVATE_KEY) {
+  console.error('FIREBASE_PRIVATE_KEY is not defined');
+  process.exit(1);
+}
+
+
 admin.initializeApp({
   credential: admin.credential.cert(serviceAcount),
   storageBucket: 'dfu-app1.appspot.com'
