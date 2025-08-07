@@ -1,36 +1,25 @@
 FROM python:3.10-slim
 
-# Instala dependências do sistema
+# Dependências sistema
 RUN apt-get update && apt-get install -y \
-    gcc \
-    g++ \
-    libglib2.0-0 \
-    libsm6 \
-    libxext6 \
-    libxrender-dev \
-    libgomp1 \
-    libglib2.0-0 \
-    curl \
+    gcc g++ make curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Define diretório de trabalho
 WORKDIR /app
 
-# Copia requirements primeiro (para cache do Docker)
-COPY requirements.txt .
-
-# Instala dependências Python
+# ⭐ INSTALAR PYTORCH CPU PRIMEIRO (mais estável)
 RUN pip install --no-cache-dir --upgrade pip
+RUN pip install torch==2.1.0+cpu torchvision==0.16.0+cpu -f https://download.pytorch.org/whl/torch_stable.html
+
+# ⭐ INSTALAR TENSORFLOW CPU
+RUN pip install tensorflow-cpu==2.15.0
+
+
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Cria diretório para modelos
-RUN mkdir -p /app/models
-
-# Copia o código da aplicação
 COPY . .
+RUN mkdir -p models
 
-# Expõe a porta
 EXPOSE $PORT
-
-# Comando para iniciar a aplicação
 CMD uvicorn api_ia:app --host 0.0.0.0 --port $PORT
