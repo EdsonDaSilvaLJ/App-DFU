@@ -37,7 +37,7 @@ export default function DetalhesAnalise() {
 
   const buscarDetalhesAnalise = async () => {
     try {
-      const token = await getFirebaseToken(auth);
+      const token = await getFirebaseToken();
       
       // ⭐ BUSCAR ANÁLISE PELA ROTA CORRETA
       const responseAnalise = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/analises/${analiseId}`, {

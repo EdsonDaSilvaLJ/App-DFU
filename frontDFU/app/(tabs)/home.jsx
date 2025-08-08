@@ -31,7 +31,7 @@ export default function Home() {
 
   const buscarPacientes = async () => {
     try {
-      const token = await getFirebaseToken(auth);
+      const token = await getFirebaseToken();
       const res = await fetch(
         buildURL(API_CONFIG.ENDPOINTS.PACIENTES),
         {

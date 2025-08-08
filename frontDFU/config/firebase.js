@@ -1,7 +1,8 @@
 // Import the functions you need from the SDKs you need
 import { initializeApp } from "firebase/app";
-import { getAnalytics } from "firebase/analytics";
-import { getAuth } from "firebase/auth";
+import { initializeAuth, getReactNativePersistence } from 'firebase/auth';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+
 
 // TODO: Add SDKs for Firebase products that you want to use
 // https://firebase.google.com/docs/web/setup#available-libraries
@@ -56,7 +57,7 @@ export const auth = initializeAuth(app, {
 // O token é usado para autenticar requisições para o backend ou outros serviços que exigem autenticação do Firebase.
 // A função retorna o token como uma string ou null se ocorrer um erro.
 
-export const getFirebaseToken = async (auth) => {
+export const getFirebaseToken = async () => {
   try {
     const user = auth.currentUser
     if (user) {
@@ -71,4 +72,3 @@ export const getFirebaseToken = async (auth) => {
   }
 };
 
-export default app;
