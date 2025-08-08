@@ -27,7 +27,7 @@ export default function Logup() {
     formState: { errors, isSubmitting },
     watch, // O 'watch' permite observar o valor de um campo em tempo real
   } = useForm();
-  
+
   const router = useRouter();
 
   // 3. A função watch é usada para saber o valor do campo 'tipoProfissional' em tempo real
@@ -63,7 +63,7 @@ export default function Logup() {
       if (!res.ok) throw new Error('Falha ao salvar no servidor');
 
       Alert.alert('Sucesso', 'Cadastro realizado com sucesso!');
-      router.replace('/home');
+      router.replace('/(tabs)home');
 
     } catch (err) {
       console.log(err.code || err.message);
@@ -102,7 +102,7 @@ export default function Logup() {
         <Controller
           control={control}
           name="cpf"
-          rules={{ 
+          rules={{
             required: 'CPF é obrigatório',
             pattern: {
               value: /^\d{11}$/,
@@ -123,7 +123,7 @@ export default function Logup() {
         <Controller
           control={control}
           name="email"
-          rules={{ 
+          rules={{
             required: 'E-mail é obrigatório',
             pattern: {
               value: /^\S+@\S+$/i,
@@ -144,7 +144,7 @@ export default function Logup() {
         <Controller
           control={control}
           name="senha"
-          rules={{ 
+          rules={{
             required: 'Senha é obrigatória',
             minLength: {
               value: 6,
@@ -204,7 +204,7 @@ export default function Logup() {
         <Controller
           control={control}
           name="telefone"
-          rules={{ 
+          rules={{
             required: 'Telefone é obrigatório',
             pattern: {
               value: /^\d{10,11}$/,

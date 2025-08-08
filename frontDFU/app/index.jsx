@@ -29,7 +29,7 @@ if (loading) {
 }
 
   if (user) {
-    return <Redirect href="/home" />;
+    return <Redirect href="/(tabs)/home" />;
   } else {
     return <Redirect href="/login" />;
   }
