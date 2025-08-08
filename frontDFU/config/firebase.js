@@ -35,13 +35,14 @@ for (const varName of requiredVars) {
 }
 
 
-
-
 // Inicializa o app do Firebase (conexão firebase e react)
 const app = initializeApp(firebaseConfig);
 
-// (opcional) Analytics, caso precise
-export const auth = getAuth(app);
+// ⭐ CONFIGURAR AUTH COM PERSISTÊNCIA
+export const auth = initializeAuth(app, {
+  persistence: getReactNativePersistence(AsyncStorage)
+});
+
 //auth é o objeto de autenticação do Firebase, usado para gerenciar usuários autenticados
 // ele pode ser usado para registrar usuários, fazer login, logout, etc. então representa a conexão do Firebase com o React
 // também pode ser usado para obter o token do usuário autenticado, que é necessário para autenticar requisições para o backend 
@@ -70,3 +71,4 @@ export const getFirebaseToken = async (auth) => {
   }
 };
 
+export default app;
