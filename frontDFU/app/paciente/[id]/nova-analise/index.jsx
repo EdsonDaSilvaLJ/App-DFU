@@ -12,6 +12,7 @@ import { Camera } from 'expo-camera';
 import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import API_CONFIG, { buildURL } from '../../../../config/api';
 
 export default function NovaAnaliseIndex() {
   const { id: pacienteId } = useLocalSearchParams();
@@ -75,14 +76,16 @@ export default function NovaAnaliseIndex() {
         name: 'ulcera_original.jpg',
       });
 
-      // ⭐ URL CORRIGIDA
-      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/detect-ulcers`, {
-        method: 'POST',
-        body: formData,
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
-      });
+      const response = await fetch(
+        buildURL(API_CONFIG.ENDPOINTS.DETECT_ULCERS),
+        {
+          method: 'POST',
+          body: formData,
+          headers: {
+            'Content-Type': 'multipart/form-data',
+          },
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);

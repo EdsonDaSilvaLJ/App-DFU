@@ -1,5 +1,5 @@
 const API_CONFIG = {
-  BASE_URL:  process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000',
+  BASE_URL:  "https://backdfu-production.up.railway.app" || 'http://localhost:3000',
   ENDPOINTS: {
     SIGNUP: '/logup',
     PACIENTES: "/pacientes",
@@ -11,6 +11,7 @@ const API_CONFIG = {
 
 // Função helper para construir URLs completas
 export const buildURL = (endpoint) => {
+  console.log(`${API_CONFIG.BASE_URL}${endpoint}`)
   return `${API_CONFIG.BASE_URL}${endpoint}`;
 };
 

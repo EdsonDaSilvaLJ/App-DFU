@@ -15,6 +15,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { getFirebaseToken, auth } from '../../../config/firebase';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../../constants/Colors';
+import API_CONFIG, { buildURL } from '../../../config/api';
 
 // ⭐ COMPONENTES MODERNOS
 import { LoadingInit } from '../../../components/LoadingStates';
@@ -34,11 +35,13 @@ export default function PerfilPaciente() {
   const buscarPaciente = async () => {
     try {
       const token = await getFirebaseToken(auth);
-      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/pacientes/${id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+      const response = await fetch(
+        buildURL(API_CONFIG.ENDPOINTS.PACIENTE_BY_ID(id)),
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
 
       if (!response.ok) throw new Error('Erro ao buscar paciente');
 

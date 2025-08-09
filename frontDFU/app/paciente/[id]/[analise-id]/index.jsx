@@ -16,6 +16,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { MaterialIcons } from '@expo/vector-icons';
 import { getFirebaseToken, auth } from '../../../../config/firebase';
 import { COLORS, SPACING, TYPOGRAPHY, BORDER_RADIUS } from '../../../../constants/Colors';
+import API_CONFIG, { buildURL } from '../../../../config/api';
 
 // ⭐ COMPONENTES MODERNOS
 import { LoadingInit } from '../../../../components/LoadingStates';
@@ -40,18 +41,22 @@ export default function DetalhesAnalise() {
       const token = await getFirebaseToken();
       
       // ⭐ BUSCAR ANÁLISE PELA ROTA CORRETA
-      const responseAnalise = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/analises/${analiseId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+       const responseAnalise = await fetch(
+        buildURL(API_CONFIG.ENDPOINTS.ANALISE_BY_ID(analiseId)),
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
 
       // Buscar dados do paciente
-      const responsePaciente = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/pacientes/${pacienteId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
+        const responsePaciente = await fetch(
+        buildURL(API_CONFIG.ENDPOINTS.PACIENTE_BY_ID(pacienteId)),
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
 
       if (!responseAnalise.ok || !responsePaciente.ok) {
         throw new Error('Erro ao buscar dados');
@@ -60,7 +65,7 @@ export default function DetalhesAnalise() {
       const dataAnalise = await responseAnalise.json();
       const dataPaciente = await responsePaciente.json();
       
-      setAnalise(dataAnalise);
+      setAnalise(dataAnalise.data);
       setPaciente(dataPaciente);
     } catch (error) {
       console.error('Erro ao buscar análise:', error);

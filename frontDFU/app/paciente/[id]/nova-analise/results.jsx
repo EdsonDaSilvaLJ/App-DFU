@@ -14,7 +14,8 @@ import {
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useForm, Controller } from 'react-hook-form';
-import { auth } from '../../../../config/firebase'
+import { auth } from '../../../../config/firebase';
+import API_CONFIG, { buildURL } from '../../../../config/api';
 
 const { width: screenWidth } = Dimensions.get('window');
 
@@ -58,13 +59,16 @@ export default function ResultsScreen() {
       };
 
       // ⭐ ENDPOINT CORRETO
-      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/classify-regions`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(classificacaoData),
-      });
+      const response = await fetch(
+        buildURL(API_CONFIG.ENDPOINTS.CLASSIFY_REGIONS),
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(classificacaoData),
+        }
+      );
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
@@ -135,14 +139,17 @@ export default function ResultsScreen() {
       };
 
       // ⭐ ENDPOINT CORRETO
-      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/api/save-analysis`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(analiseData),
-      });
-
+      const response = await fetch(
+        buildURL(API_CONFIG.ENDPOINTS.SAVE_ANALYSIS),
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(analiseData),
+        }
+      );
+      
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }

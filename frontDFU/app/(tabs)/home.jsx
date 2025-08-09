@@ -25,6 +25,7 @@ export default function Home() {
   const [busca, setBusca] = useState('');
   const [pacientesTotais, setPacientesTotais] = useState([]);
   const [pacientesFiltrados, setPacientesFiltrados] = useState([]);
+  const [totalPacientes, setTotalPacientes] = useState(0);
   const [carregando, setCarregando] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const router = useRouter();
@@ -40,8 +41,9 @@ export default function Home() {
       );
       if (!res.ok) throw new Error(`Status ${res.status}`);
       const data = await res.json();
-      setPacientesTotais(data);
-      setPacientesFiltrados(data);
+      setPacientesTotais(data.pacientes);
+      setPacientesFiltrados(data.pacientes);
+      setTotalPacientes(data.totalPacientes);
     } catch (error) {
       console.error('Erro ao buscar pacientes:', error);
     }
@@ -118,7 +120,7 @@ export default function Home() {
         {/* ⭐ SEÇÃO COM CONTADOR */}
         <SectionHeader
           title="Pacientes"
-          count={pacientesFiltrados.length}
+          count={busca.trim() ? pacientesFiltrados.length : totalPacientes}
         />
 
         {/* ⭐ LISTA COM CARDS MODERNOS */}
