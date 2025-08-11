@@ -4,6 +4,7 @@ const express = require('express');
 const multer = require('multer'); // Para upload de arquivos
 const { bucket } = require('./config/firebase');
 const admin = require('./config/firebase');
+const MONGO_URI = process.env.MONGO_URI;
 
 // Importar modelos
 const Analise = require('./models/Analise');
@@ -47,7 +48,7 @@ try {
 
 
 // Conectar ao MongoDB Atlas
-mongoose.connect(MONGODB_URI)
+mongoose.connect(MONGO_URI)
     .then(() => console.log('✅ Conectado ao MongoDB Atlas'))
     .catch((err) => console.error('❌ Erro na conexão:', err));
 
@@ -80,17 +81,13 @@ const upload = multer({
     }
 });
 
-// Variável de ambiente MONGO_URI
-const MONGO_URI = process.env.MONGO_URI;
+
 // URL base da API Python
 const PYTHON_API_BASE_URL = process.env.PYTHON_API_URL;
 if (!PYTHON_API_BASE_URL) {
     console.error('❌ Erro: A variável de ambiente PYTHON_API_URL não está configurada.');
     process.exit(1);
 }
-
-
-
 
 
 
