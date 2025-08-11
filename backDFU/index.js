@@ -47,7 +47,7 @@ try {
 
 
 // Conectar ao MongoDB Atlas
-mongoose.connect(MONGO_URI)
+mongoose.connect(MONGODB_URI)
     .then(() => console.log('✅ Conectado ao MongoDB Atlas'))
     .catch((err) => console.error('❌ Erro na conexão:', err));
 
