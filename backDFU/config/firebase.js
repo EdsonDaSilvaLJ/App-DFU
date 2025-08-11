@@ -25,7 +25,7 @@ try {
     
     admin.initializeApp({
       credential: admin.credential.cert(serviceAccount),
-      projectId: 'dfu-app1' // ⭐ EXPLÍCITO
+      projectId: 'dfu-app1'
     });
     
     console.log('✅ Firebase Admin inicializado com sucesso');

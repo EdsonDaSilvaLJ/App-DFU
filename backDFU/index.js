@@ -3,7 +3,16 @@ const mongoose = require('mongoose');
 const express = require('express');
 const multer = require('multer'); // Para upload de arquivos
 const { bucket } = require('./config/firebase');
-const admin = require('../config/firebase');
+const admin = require('./config/firebase');
+
+// Importação das rotas
+const pacienteRoute = require('./routes/pacienteRoute');
+const logupRoute = require('./routes/logupRoute');
+const profissionalRoutes = require('./routes/profissionalRoute');
+
+app.use('/pacientes', pacienteRoute);
+app.use('/logup', logupRoute);
+app.use('/profissionais', profissionalRoutes);
 
 
 // Importar modelos
@@ -64,14 +73,7 @@ try {
 }
 
 
-// Importação das rotas
-const pacienteRoute = require('./routes/pacienteRoute');
-const logupRoute = require('./routes/logupRoute');
-const profissionalRoutes = require('./routes/profissionalRoute');
 
-app.use('/pacientes', pacienteRoute);
-app.use('/logup', logupRoute);
-app.use('/profissionais', profissionalRoutes);
 
 // Rota de saúde para verificar se o servidor está funcionando
 app.get('/health', (req, res) => {
