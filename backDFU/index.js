@@ -5,8 +5,6 @@ const multer = require('multer'); // Para upload de arquivos
 const { bucket } = require('./config/firebase');
 const admin = require('./config/firebase');
 
-
-
 // Importar modelos
 const Analise = require('./models/Analise');
 const Profissional = require('./models/Profissional');
@@ -18,6 +16,41 @@ require('dotenv').config({ path: './.env' });
 const app = express();
 // Railway define a porta automaticamente através da variável PORT
 const port = process.env.PORT || 3000;
+
+
+// ⭐ MIDDLEWARES PRIMEIRO - ORDEM CRÍTICA
+app.use(cors({
+  origin: '*', // Para desenvolvimento
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+app.use(express.json({ limit: '50mb' })); // ⭐ ANTES DAS ROTAS
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
+
+// Log middleware para debug
+app.use((req, res, next) => {
+  console.log(`📡 ${req.method} ${req.path}`);
+  console.log('📦 Body:', req.body ? 'Presente' : 'Ausente');
+  console.log('🔑 Auth:', req.headers.authorization ? 'Presente' : 'Ausente');
+  next();
+});
+
+// Teste Firebase
+console.log('🔥 Testando Firebase Admin...');
+try {
+  const authService = admin.auth();
+  console.log('✅ Firebase Admin funcionando:', typeof authService);
+} catch (error) {
+  console.error('❌ Firebase Admin com erro:', error.message);
+}
+
+
+// Conectar ao MongoDB Atlas
+mongoose.connect(MONGO_URI)
+    .then(() => console.log('✅ Conectado ao MongoDB Atlas'))
+    .catch((err) => console.error('❌ Erro na conexão:', err));
+
 
 // Importação das rotas
 const pacienteRoute = require('./routes/pacienteRoute');
@@ -37,10 +70,6 @@ const fs = require('fs');
 const path = require('path');
 const stream = require('stream'); // Necessário para criar o stream do buffer
 
-// Middlewares
-app.use(cors());
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
 
 // Configuração do multer para upload de arquivos (em memória para Railway)
 const storage = multer.memoryStorage();
@@ -60,20 +89,7 @@ if (!PYTHON_API_BASE_URL) {
     process.exit(1);
 }
 
-// Conectar ao MongoDB Atlas
-mongoose.connect(MONGO_URI)
-    .then(() => console.log('✅ Conectado ao MongoDB Atlas'))
-    .catch((err) => console.error('❌ Erro na conexão:', err));
 
-
-// ⭐ TESTE DE FIREBASE ADMIN
-console.log('🔥 Testando Firebase Admin...');
-try {
-  const authService = admin.auth();
-  console.log('✅ Firebase Admin funcionando:', typeof authService);
-} catch (error) {
-  console.error('❌ Firebase Admin com erro:', error.message);
-}
 
 
 

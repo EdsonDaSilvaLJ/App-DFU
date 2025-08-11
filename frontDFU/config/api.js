@@ -16,20 +16,38 @@ export const buildURL = (endpoint) => {
   return `${API_CONFIG.BASE_URL}${endpoint}`;
 };
 
-// Função helper para fazer requisições autenticadas
 export const makeAuthenticatedRequest = async (url, options = {}, token) => {
   const defaultHeaders = {
     'Content-Type': 'application/json',
     ...(token && { 'Authorization': `Bearer ${token}` })
   };
 
-  return fetch(url, {
-    ...options,
-    headers: {
-      ...defaultHeaders,
-      ...options.headers
-    }
+  console.log('📡 Fazendo requisição:', {
+    url,
+    method: options.method || 'GET',
+    hasToken: !!token,
+    bodySize: options.body ? options.body.length : 0
   });
+
+  try {
+    const response = await fetch(url, {
+      ...options,
+      headers: {
+        ...defaultHeaders,
+        ...options.headers
+      }
+    });
+
+    console.log('📊 Resposta:', {
+      status: response.status,
+      ok: response.ok
+    });
+
+    return response;
+  } catch (error) {
+    console.error('❌ Erro na requisição:', error);
+    throw error;
+  }
 };
 
 // Função helper para requisições com FormData (upload de arquivos)

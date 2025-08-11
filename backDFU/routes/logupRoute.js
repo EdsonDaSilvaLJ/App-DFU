@@ -6,12 +6,32 @@ const Profissional = require('../models/Profissional');
 // POST - Criar/Atualizar profissional
 router.post('/', authenticateToken, async (req, res) => {
   try {
-    console.log('📝 Cadastro/Sincronização - Firebase UID:', req.firebaseUid);
-    console.log('📝 Dados recebidos:', req.body);
+    console.log('📝 Dados recebidos no logup:', req.body);
+    console.log('🔑 Firebase UID:', req.firebaseUid);
+
+    //VERIFICAR SE BODY EXISTE
+    if (!req.body || Object.keys(req.body).length === 0) {
+      console.log('❌ Body da requisição está vazio');
+      return res.status(400).json({
+        success: false,
+        erro: 'Dados não enviados',
+        message: 'Nenhum dado foi recebido na requisição'
+      });
+    }
 
     const { nome, cpf, email, telefone, tipoProfissional, crm } = req.body;
 
-    //VALIDAÇÕES OBRIGATÓRIAS (como no frontend)
+    //LOG DOS CAMPOS RECEBIDOS
+    console.log('📋 Campos recebidos:', {
+      nome: nome || 'AUSENTE',
+      cpf: cpf || 'AUSENTE',
+      email: email || 'AUSENTE',
+      telefone: telefone || 'AUSENTE',
+      tipoProfissional: tipoProfissional || 'AUSENTE',
+      crm: crm || 'AUSENTE'
+    });
+
+    //VALIDAÇÕES OBRIGATÓRIAS
     if (!nome?.trim()) {
       return res.status(400).json({
         success: false,
@@ -23,7 +43,7 @@ router.post('/', authenticateToken, async (req, res) => {
     if (!email?.trim()) {
       return res.status(400).json({
         success: false,
-        erro: 'E-mail é obrigatório', 
+        erro: 'E-mail é obrigatório',
         message: 'E-mail é obrigatório'
       });
     }
@@ -64,27 +84,7 @@ router.post('/', authenticateToken, async (req, res) => {
       });
     }
 
-    //VALIDAÇÃO DE TIPO PROFISSIONAL
-    const tiposValidos = ['medico', 'enfermeiro', 'outro'];
-    if (!tiposValidos.includes(tipoProfissional)) {
-      return res.status(400).json({
-        success: false,
-        erro: 'Tipo de profissional inválido',
-        message: 'Tipo deve ser: médico, enfermeiro ou outro'
-      });
-    }
-
-    //VALIDAÇÃO DE CRM (obrigatório para médicos e enfermeiros)
-    if ((tipoProfissional === 'medico' || tipoProfissional === 'enfermeiro') && !crm?.trim()) {
-      const tipoCrm = tipoProfissional === 'medico' ? 'CRM' : 'COREN';
-      return res.status(400).json({
-        success: false,
-        erro: `${tipoCrm} obrigatório`,
-        message: `${tipoCrm} é obrigatório para ${tipoProfissional}s`
-      });
-    }
-
-    //VERIFICAR DUPLICAÇÃO DE CPF (exceto próprio usuário)
+    //VERIFICAR DUPLICAÇÃO DE CPF
     const cpfExistente = await Profissional.findOne({
       cpf: cpfLimpo,
       firebaseUid: { $ne: req.firebaseUid }
@@ -98,9 +98,9 @@ router.post('/', authenticateToken, async (req, res) => {
       });
     }
 
-    //VERIFICAR SE JÁ EXISTE (RE-CADASTRO/SINCRONIZAÇÃO)
-    let profissional = await Profissional.findOne({ 
-      firebaseUid: req.firebaseUid 
+    //VERIFICAR SE JÁ EXISTE
+    let profissional = await Profissional.findOne({
+      firebaseUid: req.firebaseUid
     });
 
     const dadosProfissional = {
@@ -114,9 +114,9 @@ router.post('/', authenticateToken, async (req, res) => {
     };
 
     if (profissional) {
-      //ATUALIZAR EXISTENTE (SINCRONIZAÇÃO)
+      //ATUALIZAR EXISTENTE
       console.log('🔄 Atualizando profissional existente...');
-      
+
       profissional = await Profissional.findByIdAndUpdate(
         profissional._id,
         dadosProfissional,
@@ -141,9 +141,9 @@ router.post('/', authenticateToken, async (req, res) => {
       });
     }
 
-    //CRIAR NOVO PROFISSIONAL
+    //CRIAR NOVO
     console.log('🆕 Criando novo profissional...');
-    
+
     const novoProfissional = new Profissional(dadosProfissional);
     await novoProfissional.save();
 
@@ -167,18 +167,15 @@ router.post('/', authenticateToken, async (req, res) => {
   } catch (error) {
     console.error('❌ Erro no cadastro:', error);
 
-    //TRATAMENTO ESPECÍFICO DE ERROS MONGOOSE
     if (error.name === 'ValidationError') {
       return res.status(400).json({
         success: false,
         erro: 'Dados inválidos',
-        message: 'Verifique os campos obrigatórios',
-        detalhes: error.message
+        message: 'Verifique os campos obrigatórios'
       });
     }
 
     if (error.code === 11000) {
-      // Erro de duplicação (unique constraint)
       const campo = Object.keys(error.keyValue)[0];
       return res.status(409).json({
         success: false,
@@ -187,7 +184,6 @@ router.post('/', authenticateToken, async (req, res) => {
       });
     }
 
-    //ERRO GENÉRICO
     res.status(500).json({
       success: false,
       erro: 'Erro interno do servidor',
