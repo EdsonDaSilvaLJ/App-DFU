@@ -1,48 +1,34 @@
+// app/index.jsx - VERSÃO SIMPLES
 import React, { useState, useEffect } from 'react';
 import { Redirect } from 'expo-router';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth } from '../config/firebase';
 import { LoadingInit } from '../components/LoadingStates';
-import { useUserSync } from '../hooks/useUserSync';
 
 export default function Index() {
   const [user, setUser] = useState(null);
-  const [authLoading, setAuthLoading] = useState(true);
-  const { syncStatus, loading: syncLoading } = useUserSync();
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      console.log('🔥 Firebase Auth Estado:', currentUser ? `Logado: ${currentUser.email}` : 'Não logado');
       setUser(currentUser);
-      setAuthLoading(false);
+      setLoading(false);
     });
+
     return () => unsubscribe();
   }, []);
 
-  // ⭐ AINDA CARREGANDO
-  if (authLoading || (user && syncLoading)) {
+  if (loading) {
     return <LoadingInit />;
   }
 
-  // ⭐ NÃO LOGADO
-  if (!user) {
+  // ⭐ SÓ VERIFICA FIREBASE - NÃO FAZ SYNC
+  if (user) {
+    console.log('➡️ Usuário logado - redirecionando para tabs');
+    return <Redirect href="/(tabs)/home" />;
+  } else {
+    console.log('➡️ Usuário não logado - redirecionando para login');
     return <Redirect href="/login" />;
   }
-
-  // ⭐ LOGADO MAS DADOS NÃO SINCRONIZADOS
-  if (syncStatus === 'needs_sync') {
-    return <Redirect href="/sync-profile" />;
-  }
-
-  // ⭐ ERRO NA SINCRONIZAÇÃO
-  if (syncStatus === 'error') {
-    return <Redirect href="/sync-error" />;
-  }
-
-  // ⭐ TUDO OK - IR PARA HOME
-  if (syncStatus === 'synced') {
-    return <Redirect href="/(tabs)/home" />;
-  }
-
-  // ⭐ FALLBACK
-  return <LoadingInit />;
 }

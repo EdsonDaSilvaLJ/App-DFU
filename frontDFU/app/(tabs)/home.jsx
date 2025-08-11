@@ -46,12 +46,6 @@ export default function Home() {
       if (!res.ok) {
         const errorData = await res.json().catch(() => ({}));
 
-        // ⭐ VERIFICAR SE PRECISA SINCRONIZAR
-        if (errorData.needsSync) {
-          router.replace('/sync-profile');
-          return;
-        }
-
         throw new Error(`HTTP ${res.status}: ${errorData.message || 'Erro no servidor'}`);
       }
 
@@ -62,14 +56,6 @@ export default function Home() {
 
     } catch (error) {
       console.error('Erro ao buscar pacientes:', error);
-      if (error.message.includes('não autenticado')) {
-        router.replace('/login');
-      } else {
-        Alert.alert(
-          'Erro',
-          `Não foi possível carregar pacientes: ${error.message}`
-        );
-      }
     }
   };
 

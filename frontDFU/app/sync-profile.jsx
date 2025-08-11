@@ -130,7 +130,7 @@ export default function SyncProfile() {
             🔄 Complete seu Cadastro
           </Text>
           <Text style={styles.messageText}>
-            Sua conta Firebase foi criada com sucesso, mas precisamos completar
+            Sua conta foi criada com sucesso, mas precisamos completar
             seus dados profissionais para continuar.
           </Text>
         </View>
