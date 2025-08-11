@@ -5,7 +5,8 @@ import {
   View,
   StyleSheet,
   FlatList,
-  RefreshControl
+  RefreshControl,
+  Alert
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { auth, getFirebaseToken } from '../../config/firebase';
@@ -36,16 +37,39 @@ export default function Home() {
       const res = await fetch(
         buildURL(API_CONFIG.ENDPOINTS.PACIENTES),
         {
-          headers: { Authorization: `Bearer ${token}` }
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
         }
       );
-      if (!res.ok) throw new Error(`Status ${res.status}`);
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+
+        // ⭐ VERIFICAR SE PRECISA SINCRONIZAR
+        if (errorData.needsSync) {
+          router.replace('/sync-profile');
+          return;
+        }
+
+        throw new Error(`HTTP ${res.status}: ${errorData.message || 'Erro no servidor'}`);
+      }
+
       const data = await res.json();
       setPacientesTotais(data.pacientes);
       setPacientesFiltrados(data.pacientes);
       setTotalPacientes(data.totalPacientes);
+
     } catch (error) {
       console.error('Erro ao buscar pacientes:', error);
+      if (error.message.includes('não autenticado')) {
+        router.replace('/login');
+      } else {
+        Alert.alert(
+          'Erro',
+          `Não foi possível carregar pacientes: ${error.message}`
+        );
+      }
     }
   };
 

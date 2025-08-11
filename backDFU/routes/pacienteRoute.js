@@ -1,7 +1,7 @@
 // routes/pacienteRoute.js
 const express = require('express');
 const router = express.Router();
-const autenticarFirebase = require('../middleware/auth');
+const authenticateToken = require('../middleware/auth');
 const Paciente = require('../models/Paciente');
 const Profissional = require('../models/Profissional');
 const Analise = require('../models/Analise');
@@ -27,7 +27,7 @@ async function buscarProfissional(req, res, next) {
 }
 
 // ⭐ GET /pacientes - LISTAR PACIENTES DO MÉDICO
-router.get('/', autenticarFirebase, buscarProfissional, async (req, res) => {
+router.get('/', authenticateToken, buscarProfissional, async (req, res) => {
   try {
     const { page = 1, limit = 50, busca } = req.query;
     
@@ -83,7 +83,7 @@ router.get('/', autenticarFirebase, buscarProfissional, async (req, res) => {
 });
 
 // ⭐ POST /pacientes - CRIAR NOVO PACIENTE
-router.post('/', autenticarFirebase, buscarProfissional, async (req, res) => {
+router.post('/', authenticateToken, buscarProfissional, async (req, res) => {
   try {
     const { 
       nome, 
@@ -186,7 +186,7 @@ router.post('/', autenticarFirebase, buscarProfissional, async (req, res) => {
 });
 
 // ⭐ GET /pacientes/:id - BUSCAR PACIENTE ESPECÍFICO
-router.get('/:id', autenticarFirebase, buscarProfissional, async (req, res) => {
+router.get('/:id', authenticateToken, buscarProfissional, async (req, res) => {
   try {
     const { id } = req.params;
 
@@ -225,7 +225,7 @@ router.get('/:id', autenticarFirebase, buscarProfissional, async (req, res) => {
 });
 
 // ⭐ PUT /pacientes/:id - ATUALIZAR PACIENTE
-router.put('/:id', autenticarFirebase, buscarProfissional, async (req, res) => {
+router.put('/:id', authenticateToken, buscarProfissional, async (req, res) => {
   try {
     const { id } = req.params;
     const dadosAtualizacao = req.body;
@@ -278,7 +278,7 @@ router.put('/:id', autenticarFirebase, buscarProfissional, async (req, res) => {
 });
 
 // ⭐ DELETE /pacientes/:id - EXCLUIR PACIENTE
-router.delete('/:id', autenticarFirebase, buscarProfissional, async (req, res) => {
+router.delete('/:id', authenticateToken, buscarProfissional, async (req, res) => {
   try {
     const { id } = req.params;
 

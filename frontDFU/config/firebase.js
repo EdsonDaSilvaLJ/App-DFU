@@ -68,7 +68,8 @@ export const getFirebaseToken = async () => {
     }
   } catch (error) {
     console.error('Erro ao obter token:', error);
-    return null;
+    throw error;
+    ;
   }
 };
 

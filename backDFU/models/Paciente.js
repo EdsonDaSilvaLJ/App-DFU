@@ -27,8 +27,10 @@ const pacienteSchema = new Schema({
   },
   email: {
     type: String,
-    required: true,
-    unique: true
+    required: false,
+    unique: true,
+    trim: true,
+    sparse: true,
   },
   planoSaude: {
     type: String,

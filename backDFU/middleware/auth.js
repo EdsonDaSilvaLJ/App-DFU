@@ -1,22 +1,46 @@
-// pegar minha instancia de autenticacao
+// middleware/auth.js - VERSÃO CORRIGIDA
+const admin = require('../config/firebase');
 
-const {admin, auth} = require('../config/firebase');
-
-async function autenticarFirebase(req, res, next) {
-  const token = req.headers.authorization?.split(' ')[1]; //pega o token
-
-  if (!token) {
-    return res.status(401).json({ erro: 'Token não fornecido' });
-  }
-
+const authenticateToken = async (req, res, next) => {
   try {
-    const decoded = await auth.verifyIdToken(token)  // Verifica o token com o Firebase Admin SDK
+    const authHeader = req.headers.authorization;
+    const token = authHeader && authHeader.split(' ')[1];
 
-    req.firebaseUid = decoded.uid;  // Armazena o ID do usuário (médico) no request
-    next();  // Chama a próxima função (a rota de criação de paciente, por exemplo)
-  } catch (err) {
-    return res.status(401).json({ erro: 'Token inválido' });
+    if (!token) {
+      return res.status(401).json({ 
+        erro: 'Token de acesso não fornecido',
+        message: 'Autorização necessária para acessar este recurso'
+      });
+    }
+
+    // ⭐ VERIFICAR TOKEN NO FIREBASE
+    const decoded = await admin.auth().verifyIdToken(token);
+    console.log('🔑 Token Firebase verificado:', decoded.uid);
+
+    // ⭐ ADICIONAR APENAS O FIREBASE UID (não sobrescrever profissional)
+    req.firebaseUid = decoded.uid;
+    req.firebaseUser = {
+      uid: decoded.uid,
+      email: decoded.email,
+      emailVerified: decoded.email_verified
+    };
+
+    next();
+  } catch (error) {
+    console.error('❌ Erro na autenticação:', error);
+    
+    if (error.code === 'auth/id-token-expired') {
+      return res.status(401).json({
+        erro: 'Token expirado',
+        message: 'Faça login novamente'
+      });
+    }
+    
+    return res.status(403).json({
+      erro: 'Token inválido',
+      message: 'Não foi possível verificar a autenticação'
+    });
   }
-}
+};
 
-module.exports = autenticarFirebase;
+module.exports = authenticateToken;

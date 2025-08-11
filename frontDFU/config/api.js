@@ -1,11 +1,12 @@
 const API_CONFIG = {
-  BASE_URL:  "https://backdfu-production.up.railway.app" || 'http://localhost:3000',
+  BASE_URL: "https://backdfu-production.up.railway.app" || 'http://localhost:3000',
   ENDPOINTS: {
     SIGNUP: '/logup',
     PACIENTES: "/pacientes",
     PACIENTE_BY_ID: (id) => `/pacientes/${id}`,
     UPLOAD_FOTO: '/pacientes/upload-foto',
     SALVAR_AVALIACAO: "/pacientes/salvar-avaliacao",
+    PROFISSIONAL_PROFILE: '/profissionais/profile',
   }
 };
 

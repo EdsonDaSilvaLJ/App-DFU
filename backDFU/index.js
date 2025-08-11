@@ -54,9 +54,11 @@ mongoose.connect(MONGO_URI)
 // Importação das rotas
 const pacienteRoute = require('./routes/pacienteRoute');
 const logupRoute = require('./routes/logupRoute');
+const profissionalRoutes = require('./routes/profissionalRoute');
 
 app.use('/pacientes', pacienteRoute);
 app.use('/logup', logupRoute);
+app.use('/profissionais', profissionalRoutes);
 
 // Rota de saúde para verificar se o servidor está funcionando
 app.get('/health', (req, res) => {
