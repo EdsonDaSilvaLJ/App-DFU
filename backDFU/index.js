@@ -3,6 +3,8 @@ const mongoose = require('mongoose');
 const express = require('express');
 const multer = require('multer'); // Para upload de arquivos
 const { bucket } = require('./config/firebase');
+const admin = require('../config/firebase');
+
 
 // Importar modelos
 const Analise = require('./models/Analise');
@@ -50,6 +52,17 @@ if (!PYTHON_API_BASE_URL) {
 mongoose.connect(MONGO_URI)
     .then(() => console.log('✅ Conectado ao MongoDB Atlas'))
     .catch((err) => console.error('❌ Erro na conexão:', err));
+
+
+// ⭐ TESTE DE FIREBASE ADMIN
+console.log('🔥 Testando Firebase Admin...');
+try {
+  const authService = admin.auth();
+  console.log('✅ Firebase Admin funcionando:', typeof authService);
+} catch (error) {
+  console.error('❌ Firebase Admin com erro:', error.message);
+}
+
 
 // Importação das rotas
 const pacienteRoute = require('./routes/pacienteRoute');

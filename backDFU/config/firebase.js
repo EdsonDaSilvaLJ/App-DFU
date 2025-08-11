@@ -15,20 +15,26 @@ const serviceAcount = {
   universe_domain: process.env.FIREBASE_UNIVERSE_DOMAIN
 };
 
-
-if (!process.env.FIREBASE_PRIVATE_KEY) {
-  console.error('FIREBASE_PRIVATE_KEY is not defined');
-  process.exit(1);
+try {
+  // ⭐ VERIFICAR SE JÁ FOI INICIALIZADO
+  if (!admin.apps.length) {
+    console.log('🔧 Inicializando Firebase Admin...');
+    
+    // ⭐ CARREGAR CREDENCIAIS
+    const serviceAccount = require('./dfu-app1-firebase-adminsdk-fbsvc-64e7a9d78e.json');
+    
+    admin.initializeApp({
+      credential: admin.credential.cert(serviceAccount),
+      projectId: 'dfu-app1' // ⭐ EXPLÍCITO
+    });
+    
+    console.log('✅ Firebase Admin inicializado com sucesso');
+  } else {
+    console.log('✅ Firebase Admin já estava inicializado');
+  }
+} catch (error) {
+  console.error('❌ Erro ao inicializar Firebase Admin:', error);
+  throw error;
 }
 
-
-admin.initializeApp({
-  credential: admin.credential.cert(serviceAcount),
-  storageBucket: 'dfu-app1.appspot.com'
-});
-
-const db = admin.firestore();
-const bucket = admin.storage().bucket();
-const auth = admin.auth();
-
-module.exports = { admin, db, bucket, auth };
+module.exports = admin;
