@@ -5,14 +5,6 @@ const multer = require('multer'); // Para upload de arquivos
 const { bucket } = require('./config/firebase');
 const admin = require('./config/firebase');
 
-// Importação das rotas
-const pacienteRoute = require('./routes/pacienteRoute');
-const logupRoute = require('./routes/logupRoute');
-const profissionalRoutes = require('./routes/profissionalRoute');
-
-app.use('/pacientes', pacienteRoute);
-app.use('/logup', logupRoute);
-app.use('/profissionais', profissionalRoutes);
 
 
 // Importar modelos
@@ -26,6 +18,17 @@ require('dotenv').config({ path: './.env' });
 const app = express();
 // Railway define a porta automaticamente através da variável PORT
 const port = process.env.PORT || 3000;
+
+// Importação das rotas
+const pacienteRoute = require('./routes/pacienteRoute');
+const logupRoute = require('./routes/logupRoute');
+const profissionalRoutes = require('./routes/profissionalRoute');
+
+app.use('/pacientes', pacienteRoute);
+app.use('/logup', logupRoute);
+app.use('/profissionais', profissionalRoutes);
+
+
 
 // Módulos para requisições HTTP e manipulação de arquivos
 const axios = require('axios');
