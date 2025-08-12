@@ -24,6 +24,10 @@ import zipfile
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# CONFIGURAR AMBIENTE HEADLESS 
+os.environ['DISPLAY'] = ':99'
+os.environ['QT_QPA_PLATFORM'] = 'offscreen'
+
 # ========================================
 # FIX CRÍTICO PARA DEPLOYMENT - PosixPath
 # ========================================

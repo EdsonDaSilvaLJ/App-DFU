@@ -14,6 +14,8 @@ import { useRouter } from 'expo-router';
 import { useForm, Controller } from 'react-hook-form';
 import { getFirebaseToken } from '../../config/firebase';
 import { COLORS, SPACING, TYPOGRAPHY } from '../../constants/Colors';
+import API_CONFIG, { buildURL, makeAuthenticatedRequest } from '../../config/api'; // <-- Adicione esta linha (ajuste o caminho conforme necessário)
+
 
 // ⭐ IMPORTAR COMPONENTES MODERNOS
 import { ModernTextInput, SelectInput } from '../../components/Inputs';
@@ -121,37 +123,53 @@ export default function CadastrarPaciente() {
 
   // ⭐ FUNÇÃO DE CADASTRO
   const onSubmit = async (data) => {
-    setLoading(true);
-
     try {
-      const token = await getFirebaseToken();
-      if (!token) {
-        Alert.alert('Erro', 'Usuário não autenticado. Faça login novamente.');
-        return;
-      }
+      setLoading(true);
+      console.log('🔄 Iniciando cadastro de paciente...');
 
-      const response = await fetch(`${process.env.EXPO_PUBLIC_API_URL}/pacientes`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          nome: data.nome.trim(),
-          cpf: data.cpf.replace(/\D/g, ''),
-          dataNascimento: data.dataNascimento,
-          genero: data.genero,
-          telefone: data.telefone.replace(/\D/g, ''),
-          email: data.email?.trim() || null,
-          planoSaude: data.planoSaude?.trim() || null,
-          endereco: data.endereco?.trim() || null
-        })
+      // ⭐ VERIFICAR DADOS ANTES DE ENVIAR (usando data, não formData)
+      console.log('📋 Dados do formulário:', {
+        nome: data.nome,
+        cpf: data.cpf,
+        email: data.email || 'não informado',
+        telefone: data.telefone,
+        dataNascimento: data.dataNascimento
       });
 
+      // ⭐ VERIFICAR TOKEN
+      const token = await getFirebaseToken();
+      console.log('🔑 Token obtido:', token ? 'OK' : 'ERRO');
+
+      // ⭐ VERIFICAR URL
+      const url = buildURL(API_CONFIG.ENDPOINTS.PACIENTES);
+      console.log('🌐 URL para cadastro:', url);
+
+      const response = await makeAuthenticatedRequest(
+        url,
+        {
+          method: 'POST',
+          body: JSON.stringify({
+            nome: data.nome.trim(),
+            cpf: data.cpf.replace(/\D/g, ''), // Só números
+            dataNascimento: data.dataNascimento,
+            genero: data.genero,              // ⭐ OBRIGATÓRIO
+            telefone: data.telefone.replace(/\D/g, ''), // Só números
+            email: data.email.trim() || null,
+            endereco: data.endereco.trim() || null,
+            planoSaude: data.planoSaude.trim() || null
+          })
+        },
+        token
+      );
+
+      console.log('📊 Status da resposta:', response.status);
+
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Erro ao cadastrar paciente.');
+        const errorData = await response.json().catch(() => ({}));
+        console.log('❌ Erro do servidor:', errorData);
+        throw new Error(errorData.message || `HTTP ${response.status}`);
       }
+
 
       Alert.alert(
         'Sucesso!',
@@ -177,12 +195,12 @@ export default function CadastrarPaciente() {
 
   // ⭐ VERIFICAR SE PODE CADASTRAR
   const canSubmit = watchAllFields.nome?.trim() &&
-                    watchAllFields.cpf &&
-                    watchAllFields.dataNascimento &&
-                    watchAllFields.genero &&
-                    watchAllFields.telefone &&
-                    isValid &&
-                    !loading;
+    watchAllFields.cpf &&
+    watchAllFields.dataNascimento &&
+    watchAllFields.genero &&
+    watchAllFields.telefone &&
+    isValid &&
+    !loading;
 
   return (
     <SafeAreaView style={styles.safeArea}>
