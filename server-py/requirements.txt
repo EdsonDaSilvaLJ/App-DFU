@@ -1,14 +1,26 @@
+# requirements.txt - VERSÃO PARA RAILWAY
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
-tensorflow-cpu==2.15.0
-torch==2.1.0+cpu
-torchvision==0.16.0+cpu
-ultralytics==8.0.196
-opencv-python-headless==4.8.1.78
+python-multipart==0.0.6
 pillow==10.1.0
 numpy==1.24.3
-python-multipart==0.0.6
+opencv-python-headless==4.8.1.78
 aiofiles==23.2.1
+pydantic==2.5.0
+
+# ⭐ TENSORFLOW CPU (compatível com Railway)
+tensorflow-cpu==2.15.0
+
+# ⭐ PYTORCH CPU (leve para Railway)
+torch==2.1.0+cpu
+torchvision==0.16.0+cpu
+-f https://download.pytorch.org/whl/torch_stable.html
+
+# ⭐ YOLOV5 DIRETO DO GITHUB (compatível com torch.hub)
+git+https://github.com/ultralytics/yolov5.git
+
+# ⭐ DEPENDÊNCIAS ADICIONAIS
 requests==2.31.0
-python-dotenv==1.0.0
-gdown>=4.7.1
+Pillow==10.1.0
+matplotlib==3.7.2
+scipy==1.11.3
