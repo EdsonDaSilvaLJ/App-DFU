@@ -167,7 +167,7 @@ app.post('/api/detect-ulcers', upload.single('file'), async (req, res) => {
             headers: {
                 ...formData.getHeaders(),
             },
-            timeout: 60000, // 60 segundos
+            timeout: 240000, // 240 segundos
             maxContentLength: Infinity,
             maxBodyLength: Infinity
         });
