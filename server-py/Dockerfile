@@ -1,25 +1,25 @@
-# Dockerfile - VERSÃO ULTRA SIMPLES
+# Dockerfile - VERSÃO SEM DEPENDÊNCIAS SISTEMA
 FROM python:3.10-slim
-
-# ⭐ SÓ O ESSENCIAL (sem git, wget, dev packages)
-RUN apt-get update && apt-get install -y \
-    libgl1-mesa-glx \
-    libglib2.0-0 \
-    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
+# ⭐ UPGRADE PIP
 RUN pip install --no-cache-dir --upgrade pip
 
-# ⭐ COPIAR REQUIREMENTS E INSTALAR
+# ⭐ COPIAR E INSTALAR REQUIREMENTS
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
+# ⭐ COPIAR CÓDIGO
 COPY . .
+
+# ⭐ CRIAR PASTA MODELS
 RUN mkdir -p models-ia
 
-ENV DISPLAY=:99
+# ⭐ VARIÁVEIS DE AMBIENTE
 ENV PYTHONUNBUFFERED=1
+ENV DISPLAY=:99
+ENV QT_QPA_PLATFORM=offscreen
 
 EXPOSE $PORT
 CMD uvicorn api_ia:app --host 0.0.0.0 --port $PORT
