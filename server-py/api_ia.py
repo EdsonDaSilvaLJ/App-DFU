@@ -215,12 +215,12 @@ async def carregar_modelo_classificacao():
             return
         
         logger.info("📚 Carregando modelo de classificação...")
-        modelo_classificacao = tf.keras.models.load_model(str(modelo_path))
+        modelo_classificacao = tf.keras.models.load_model(str(modelo_path), compile=False)
         logger.info("✅ Modelo de classificação carregado com sucesso!")
         
     except Exception as e:
         logger.error(f"❌ Erro ao carregar modelo de classificação: {e}")
-        # Fallback para modelo mockado
+        # Fallback para modelo mockad
         modelo_classificacao = tf.keras.Sequential([
             tf.keras.layers.Input(shape=(224, 224, 3)),
             tf.keras.layers.GlobalAveragePooling2D(),
