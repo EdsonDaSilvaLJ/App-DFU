@@ -14,8 +14,3 @@ scipy==1.11.3
 
 # TensorFlow CPU (leve)
 tensorflow-cpu==2.15.0
-
-# PyTorch CPU (leve) 
-torch==2.1.0+cpu
-torchvision==0.16.0+cpu
---index-url https://download.pytorch.org/whl/cpu

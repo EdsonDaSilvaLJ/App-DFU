@@ -13,7 +13,10 @@ WORKDIR /app
 
 # Copia requirements e instala pacotes Python
 COPY requirements.txt .
+
 RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir torch==2.1.0+cpu torchvision==0.16.0+cpu \
+       --index-url https://download.pytorch.org/whl/cpu \
     && pip install --no-cache-dir -r requirements.txt
 
 # Copia o código da aplicação
