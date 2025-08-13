@@ -173,19 +173,11 @@ app.post('/api/detect-ulcers', upload.single('file'), async (req, res) => {
         });
 
         console.log('📊 Status da resposta:', response.status);
-
-        if (!response.ok) {
-            const errorText = await response.text();
-            console.error('❌ Erro do server-py:', errorText);
-            throw new Error(`Server-py retornou ${response.status}: ${errorText}`);
-        }
-
-        const responseData = await response.json();
         console.log('✅ Dados recebidos do server-py');
 
         res.json({
             success: true,
-            ...responseData
+            ...response.data
         });
 
     } catch (error) {
