@@ -126,7 +126,7 @@ app.post('/api/detect-ulcers', upload.single('file'), async (req, res) => {
             });
         }
 
-        const urlDetection = `${PYTHON_API_BASE_URL}/api/detect-ulcers`; // ✅ ROTA CORRETA
+        const urlDetection = `${PYTHON_API_BASE_URL}/predict/detection`; // ✅ ROTA CORRETA
         console.log('🌐 URL montada:', urlDetection);;
 
         // ⭐ TESTAR A URL ANTES DE USAR (COM FETCH)
@@ -256,7 +256,7 @@ app.post('/api/classify-regions', express.json(), async (req, res) => {
         });
         formClassification.append('deteccoes_json', JSON.stringify(boxes_finais));
 
-        const urlClassification = `${PYTHON_API_BASE_URL}/api/classify-regions`;
+        const urlClassification = `${PYTHON_API_BASE_URL}/predict/classification`;
         console.log('🔗 URL classificação:', urlClassification);
 
         // ⭐ MELHORAR CONFIGURAÇÃO DO AXIOS
