@@ -1,20 +1,18 @@
-# requirements.txt - v2 - VERSÃO COM DEPENDÊNCIAS COMPATÍVEIS
-fastapi==0.104.1
-uvicorn[standard]==0.24.0
-python-multipart==0.0.6
-pillow==10.1.0
+# requirements.txt - v3 - VERSÃO RELAXADA PARA RESOLUÇÃO DE DEPENDÊNCIAS
+fastapi
+uvicorn[standard]
+python-multipart
+pillow
+numpy
+opencv-python-headless
+aiofiles
+pydantic
+requests
+gdown
+matplotlib
+scipy
 
-# Numpy rebaixado para ser compatível com Tensorflow 2.13
-numpy==1.23.5
-
-opencv-python-headless==4.8.1.78
-aiofiles==23.2.1
-pydantic==2.5.0
-requests==2.31.0
-gdown==4.7.1
-matplotlib==3.7.2
-scipy==1.11.3
-
+# -- Dependências-chave com versões fixas --
 # TensorFlow CPU compatível com modelos Keras 2
 tensorflow-cpu==2.13.0
 
