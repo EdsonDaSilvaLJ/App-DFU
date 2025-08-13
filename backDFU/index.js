@@ -6,6 +6,14 @@ const { bucket } = require('./config/firebase');
 const admin = require('./config/firebase');
 const MONGO_URI = process.env.MONGO_URI;
 
+// Módulos para requisições HTTP e manipulação de arquivos
+const axios = require('axios');
+const FormData = require('form-data');
+const fs = require('fs');
+const path = require('path');
+const stream = require('stream'); // Necessário para criar o stream do buffer
+
+
 // Importar modelos
 const Analise = require('./models/Analise');
 const Profissional = require('./models/Profissional');
@@ -61,15 +69,6 @@ const profissionalRoutes = require('./routes/profissionalRoute');
 app.use('/pacientes', pacienteRoute);
 app.use('/logup', logupRoute);
 app.use('/profissionais', profissionalRoutes);
-
-
-
-// Módulos para requisições HTTP e manipulação de arquivos
-const axios = require('axios');
-const FormData = require('form-data');
-const fs = require('fs');
-const path = require('path');
-const stream = require('stream'); // Necessário para criar o stream do buffer
 
 
 // Configuração do multer para upload de arquivos (em memória para Railway)
@@ -133,12 +132,8 @@ app.post('/api/detect-ulcers', upload.single('file'), async (req, res) => {
         // ⭐ TESTAR A URL ANTES DE USAR (COM FETCH)
         try {
             console.log('🧪 Testando conectividade com server-py...');
-            const testResponse = await fetch(PYTHON_API_BASE_URL);
+            const testResponse = await axios.get(PYTHON_API_BASE_URL, { timeout: 10000 });
             console.log('🧪 Teste de conectividade:', testResponse.status);
-
-            if (!testResponse.ok) {
-                throw new Error(`HTTP ${testResponse.status}`);
-            }
         } catch (testError) {
             console.error('🧪 Falha no teste de conectividade:', testError.message);
             return res.status(500).json({
@@ -168,10 +163,13 @@ app.post('/api/detect-ulcers', upload.single('file'), async (req, res) => {
 
         console.log('🔗 Fazendo fetch para:', urlDetection);
 
-        const response = await fetch(urlDetection, {
-            method: 'POST',
-            body: formData,
-            headers: formData.getHeaders()
+        const response = await axios.post(urlDetection, formData, {
+            headers: {
+                ...formData.getHeaders(),
+            },
+            timeout: 60000, // 60 segundos
+            maxContentLength: Infinity,
+            maxBodyLength: Infinity
         });
 
         console.log('📊 Status da resposta:', response.status);
@@ -196,9 +194,30 @@ app.post('/api/detect-ulcers', upload.single('file'), async (req, res) => {
             stack: error.stack
         });
 
-        res.status(500).json({
+        // ⭐ TRATAMENTO DE ERRO ESPECÍFICO PARA AXIOS
+        let errorMessage = error.message;
+        let statusCode = 500;
+
+        if (error.response) {
+            // Server respondeu com erro
+            statusCode = error.response.status;
+            errorMessage = error.response.data?.message || error.response.statusText || error.message;
+        } else if (error.request) {
+            // Request foi feito mas não houve resposta
+            errorMessage = 'Server-py não está respondendo';
+            statusCode = 503;
+        } else {
+            // Erro na configuração da request
+            errorMessage = 'Erro na configuração da requisição';
+        }
+
+
+        res.status(statusCode).json({
             success: false,
-            message: error.message,
+            message: errorMessage,
+            statusText: error.response?.statusText,
+            data: error.response?.data,
+            config: error.config?.url,
             debug: {
                 PYTHON_API_BASE_URL: PYTHON_API_BASE_URL || 'undefined'
             }
@@ -237,16 +256,31 @@ app.post('/api/classify-regions', express.json(), async (req, res) => {
         });
         formClassification.append('deteccoes_json', JSON.stringify(boxes_finais));
 
-        const urlClassification = `${PYTHON_API_BASE_URL}/api/classify-regions`; 
+        const urlClassification = `${PYTHON_API_BASE_URL}/api/classify-regions`;
+        console.log('🔗 URL classificação:', urlClassification);
+
+        // ⭐ MELHORAR CONFIGURAÇÃO DO AXIOS
         const responseClassification = await axios.post(urlClassification, formClassification, {
-            headers: formClassification.getHeaders(),
-            timeout: 60000
+            headers: {
+                ...formClassification.getHeaders(),
+            },
+            timeout: 60000,
+            maxContentLength: Infinity,
+            maxBodyLength: Infinity
         });
 
-        console.log(`✅ Classificação concluída. ${responseClassification.data.resultados.length} resultados.`);
+        console.log(`✅ Classificação concluída. Status: ${responseClassification.status}`);
+
+        // ⭐ VERIFICAR SE TEM RESULTADOS
+        if (!responseClassification.data || !responseClassification.data.resultados) {
+            throw new Error('Resposta inválida do server-py: resultados não encontrados');
+        }
+
+        const resultados = responseClassification.data.resultados;
+        console.log(`📊 ${resultados.length} resultados recebidos`);
 
         // ⭐ PROCESSAR RESULTADOS PARA FRONTEND
-        const resultados_classificacao = responseClassification.data.resultados.map((resultado, index) => {
+        const resultados_classificacao = resultados.map((resultado, index) => {
             // Criar subimagem (crop da região)
             const subimagem_base64 = criarSubimagem(imagem_redimensionada, resultado);
 
@@ -269,10 +303,27 @@ app.post('/api/classify-regions', express.json(), async (req, res) => {
         });
 
     } catch (error) {
-        console.error('❌ Erro na classificação:', error.message);
-        res.status(500).json({
+        console.error('❌ Erro na classificação:', {
+            message: error.message,
+            status: error.response?.status,
+            data: error.response?.data
+        });
+
+        // ⭐ TRATAMENTO DE ERRO ESPECÍFICO PARA AXIOS
+        let errorMessage = error.message;
+        let statusCode = 500;
+
+        if (error.response) {
+            statusCode = error.response.status;
+            errorMessage = error.response.data?.message || error.response.statusText || error.message;
+        } else if (error.request) {
+            errorMessage = 'Server-py não está respondendo para classificação';
+            statusCode = 503;
+        }
+
+        res.status(statusCode).json({
             success: false,
-            message: error.message || 'Erro na classificação das regiões'
+            message: errorMessage
         });
     }
 });
