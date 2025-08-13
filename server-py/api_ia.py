@@ -10,7 +10,7 @@ from tensorflow.keras.preprocessing import image
 import io
 from PIL import Image
 import base64
-import json # Importação necessária para lidar com o Form JSON
+import json
 from typing import Dict, List
 import sys
 import logging
@@ -28,6 +28,7 @@ logger = logging.getLogger(__name__)
 # CONFIGURAR AMBIENTE HEADLESS 
 os.environ['DISPLAY'] = ':99'
 os.environ['QT_QPA_PLATFORM'] = 'offscreen'
+os.environ['YOLO_VERBOSE'] = 'False'
 
 # ========================================
 # FIX CRÍTICO PARA DEPLOYMENT - PosixPath
@@ -65,7 +66,7 @@ modelo_classificacao = None
 modelo_yolo = None
 LABEL_COLS = ['none', 'infection', 'ischaemia', 'both']
 
-# URLs dos modelos (você precisará hospedar estes arquivos)
+# URLs dos modelos - AGORA USANDO DIRECT DOWNLOAD LINKS
 MODELO_CLASSIFICACAO_URL = os.getenv("MODELO_CLASSIFICACAO_URL", "")
 MODELO_YOLO_URL = os.getenv("MODELO_YOLO_URL", "")
 
@@ -73,63 +74,56 @@ MODELO_YOLO_URL = os.getenv("MODELO_YOLO_URL", "")
 MODELS_DIR = Path("models")
 MODELS_DIR.mkdir(exist_ok=True)
 
-async def baixar_google_drive(url: str, destino: Path, descricao: str):
-    """Baixa arquivos do Google Drive com múltiplas estratégias"""
+async def baixar_google_drive_direto(file_id: str, destino: Path, descricao: str):
+    """Estratégia melhorada para download do Google Drive"""
     
-    # Extrai o ID do arquivo da URL
-    file_id = None
-    if "drive.google.com" in url:
-        match = re.search(r'/d/([a-zA-Z0-9-_]+)', url)
-        if match:
-            file_id = match.group(1)
-        else:
-            # Tenta extrair do formato uc?id=
-            match = re.search(r'id=([a-zA-Z0-9-_]+)', url)
-            if match:
-                file_id = match.group(1)
-    
-    if not file_id:
-        logger.warning(f"⚠️ Não foi possível extrair ID do arquivo de {url}")
-        return False
-    
-    # Lista de URLs para tentar
-    urls_para_tentar = [
-        f"https://drive.google.com/uc?id={file_id}",
+    # URLs de download direto do Google Drive
+    urls_download = [
+        f"https://drive.google.com/uc?export=download&id={file_id}",
         f"https://drive.google.com/uc?id={file_id}&export=download",
-        f"https://drive.google.com/file/d/{file_id}/view?usp=sharing",
-        url  # URL original
+        f"https://drive.usercontent.google.com/download?id={file_id}&export=download"
     ]
     
-    for i, test_url in enumerate(urls_para_tentar, 1):
+    for i, url in enumerate(urls_download, 1):
         try:
-            logger.info(f"🔄 Tentativa {i}/{len(urls_para_tentar)}: {test_url[:60]}...")
+            logger.info(f"🔄 Tentativa {i}: {url[:60]}...")
             
-            # Usa gdown com diferentes parâmetros
-            if i <= 2:
-                # Primeiras tentativas com gdown
-                gdown.download(test_url, str(destino), quiet=False, fuzzy=True)
-            else:
-                # Últimas tentativas com requests direto
-                response = requests.get(test_url, stream=True, allow_redirects=True)
-                response.raise_for_status()
-                
-                # Verifica se o conteúdo não é uma página de erro do Google
-                content_type = response.headers.get('content-type', '')
-                if 'text/html' in content_type:
-                    logger.warning(f"⚠️ Recebido HTML ao invés de arquivo binário")
-                    continue
-                
-                with open(destino, 'wb') as f:
-                    for chunk in response.iter_content(chunk_size=8192):
-                        if chunk:
-                            f.write(chunk)
+            session = requests.Session()
+            response = session.get(url, stream=True, allow_redirects=True)
             
-            # Verifica se o arquivo foi baixado e tem tamanho razoável
-            if destino.exists() and destino.stat().st_size > 1000:  # Pelo menos 1KB
-                logger.info(f"✅ Sucesso na tentativa {i}")
+            # Verifica se há redirecionamento para confirmação
+            if "confirm=" in response.url or "virus scan warning" in response.text.lower():
+                # Busca token de confirmação
+                for line in response.text.split('\n'):
+                    if 'confirm=' in line:
+                        token_match = re.search(r'confirm=([a-zA-Z0-9_-]+)', line)
+                        if token_match:
+                            confirm_token = token_match.group(1)
+                            confirm_url = f"{url}&confirm={confirm_token}"
+                            logger.info(f"🔄 Usando token de confirmação: {confirm_token[:10]}...")
+                            response = session.get(confirm_url, stream=True)
+                            break
+            
+            response.raise_for_status()
+            
+            # Verifica content-type
+            content_type = response.headers.get('content-type', '')
+            if 'text/html' in content_type and response.text and len(response.text) < 10000:
+                logger.warning(f"⚠️ Recebido HTML (provável erro): {len(response.text)} bytes")
+                continue
+            
+            # Salva o arquivo
+            with open(destino, 'wb') as f:
+                for chunk in response.iter_content(chunk_size=8192):
+                    if chunk:
+                        f.write(chunk)
+            
+            # Verifica se o arquivo foi baixado corretamente
+            if destino.exists() and destino.stat().st_size > 10000:  # Pelo menos 10KB
+                logger.info(f"✅ Download bem-sucedido: {destino.stat().st_size} bytes")
                 return True
             else:
-                logger.warning(f"⚠️ Arquivo muito pequeno ou inexistente na tentativa {i}")
+                logger.warning(f"⚠️ Arquivo muito pequeno: {destino.stat().st_size if destino.exists() else 0} bytes")
                 if destino.exists():
                     destino.unlink()
                     
@@ -142,7 +136,7 @@ async def baixar_google_drive(url: str, destino: Path, descricao: str):
     return False
 
 async def baixar_arquivo(url: str, destino: Path, descricao: str = "arquivo"):
-    """Baixa um arquivo de uma URL com progress"""
+    """Baixa um arquivo de uma URL com estratégias múltiplas"""
     if not url:
         raise ValueError(f"URL não configurada para {descricao}")
     
@@ -153,29 +147,41 @@ async def baixar_arquivo(url: str, destino: Path, descricao: str = "arquivo"):
     logger.info(f"📥 Baixando {descricao} de {url}")
     
     try:
-        # Se for Google Drive, usa estratégias múltiplas
+        # Extrai ID do Google Drive se necessário
+        file_id = None
         if "drive.google.com" in url or "docs.google.com" in url:
-            success = await baixar_google_drive(url, destino, descricao)
-            if not success:
-                raise Exception(f"Falha em todas as estratégias do Google Drive")
-        else:
-            # Download direto
-            response = requests.get(url, stream=True)
+            patterns = [
+                r'/d/([a-zA-Z0-9-_]+)',
+                r'id=([a-zA-Z0-9-_]+)',
+                r'/file/d/([a-zA-Z0-9-_]+)'
+            ]
+            for pattern in patterns:
+                match = re.search(pattern, url)
+                if match:
+                    file_id = match.group(1)
+                    break
+        
+        success = False
+        if file_id:
+            success = await baixar_google_drive_direto(file_id, destino, descricao)
+        
+        if not success:
+            # Fallback para download direto
+            response = requests.get(url, stream=True, allow_redirects=True)
             response.raise_for_status()
             
-            total_size = int(response.headers.get('content-length', 0))
-            
             with open(destino, 'wb') as f:
-                downloaded = 0
                 for chunk in response.iter_content(chunk_size=8192):
                     if chunk:
                         f.write(chunk)
-                        downloaded += len(chunk)
-                        if total_size > 0:
-                            percent = (downloaded / total_size) * 100
-                            logger.info(f"📊 Download {descricao}: {percent:.1f}%")
+            
+            if destino.exists() and destino.stat().st_size > 1000:
+                success = True
         
-        logger.info(f"✅ {descricao} baixado com sucesso: {destino}")
+        if success:
+            logger.info(f"✅ {descricao} baixado com sucesso: {destino}")
+        else:
+            raise Exception(f"Falha em todas as estratégias de download")
         
     except Exception as e:
         logger.error(f"❌ Erro ao baixar {descricao}: {e}")
@@ -246,7 +252,13 @@ async def carregar_modelo_yolo():
     for i, estrategia in enumerate(estrategias, 1):
         try:
             logger.info(f"🔄 Tentativa {i}: Carregando modelo YOLO...")
-            modelo_yolo = await estrategia()
+            resultado = estrategia()
+            
+            # Se a estratégia retorna uma coroutine, aguarda
+            if hasattr(resultado, '__await__'):
+                modelo_yolo = await resultado
+            else:
+                modelo_yolo = resultado
             
             if modelo_yolo is not None:
                 # Configura parâmetros
@@ -282,16 +294,17 @@ async def carregar_yolo_customizado():
         lambda: carregar_yolo_torch_direto(modelo_path)
     ]
     
-    for tentativa in tentativas:
+    for i, tentativa in enumerate(tentativas, 1):
         try:
+            logger.info(f"🔧 Tentativa de carregamento customizado {i}/3...")
             return tentativa()
         except Exception as e:
-            logger.warning(f"Tentativa de carregamento customizado falhou: {e}")
+            logger.warning(f"Tentativa de carregamento customizado {i} falhou: {e}")
             continue
     
     raise Exception("Falha em todas as tentativas de carregamento customizado")
 
-async def carregar_yolo_pretrained(model_name):
+def carregar_yolo_pretrained(model_name):
     """Carrega modelo YOLO pré-treinado"""
     logger.info(f"📦 Carregando modelo pré-treinado: {model_name}")
     
@@ -314,7 +327,7 @@ def carregar_yolo_mock():
             self.iou = 0.45
         
         def __call__(self, img):
-            # Retorna detecções vazias
+            # Retorna detecções vazias mas com estrutura correta
             class MockResult:
                 def __init__(self):
                     self.xyxy = [torch.tensor([])]
@@ -351,11 +364,16 @@ async def startup_event():
     
     try:
         # Carrega os modelos em paralelo
-        await asyncio.gather(
+        results = await asyncio.gather(
             carregar_modelo_classificacao(),
             carregar_modelo_yolo(),
             return_exceptions=True
         )
+        
+        # Verifica se houve erros
+        for i, result in enumerate(results):
+            if isinstance(result, Exception):
+                logger.error(f"❌ Erro ao carregar modelo {i}: {result}")
         
         logger.info("✅ API inicializada com sucesso!")
         
@@ -492,6 +510,15 @@ async def predict_detection(file: UploadFile = File(...)):
         logger.error(f"Erro na detecção: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        app, 
+        host="0.0.0.0", 
+        port=int(os.getenv("PORT", 8000)),
+        log_level="info"
+    )e))
+
 @app.post("/predict/classification")
 async def predict_classification(
     file: UploadFile = File(...), 
@@ -589,13 +616,4 @@ async def models_info():
         })
     except Exception as e:
         logger.error(f"Erro ao obter info dos modelos: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(
-        app, 
-        host="0.0.0.0", 
-        port=int(os.getenv("PORT", 8000)),
-        log_level="info"
-    )
+        raise HTTPException(status_code=500, detail=str(

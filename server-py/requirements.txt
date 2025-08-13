@@ -1,4 +1,4 @@
-# requirements.txt - VERSÃO SIMPLIFICADA PARA RAILWAY
+# requirements.txt - VERSÃO CORRIGIDA PARA RAILWAY
 fastapi==0.104.1
 uvicorn[standard]==0.24.0
 python-multipart==0.0.6
@@ -19,3 +19,11 @@ tensorflow-cpu==2.15.0
 torch==2.1.0+cpu
 torchvision==0.16.0+cpu
 --index-url https://download.pytorch.org/whl/cpu
+
+# ADICIONADO: Ultralytics para YOLOv5
+ultralytics==8.0.196
+
+# ADICIONADO: Dependências extras para YOLO
+PyYAML>=5.3.1
+tqdm>=4.64.0
+psutil
