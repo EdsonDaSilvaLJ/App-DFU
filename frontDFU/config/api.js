@@ -7,6 +7,10 @@ const API_CONFIG = {
     UPLOAD_FOTO: '/pacientes/upload-foto',
     SALVAR_AVALIACAO: "/pacientes/salvar-avaliacao",
     PROFISSIONAL_PROFILE: '/profissionais/profile',
+
+    // ⭐ ADICIONAR ENDPOINTS DA IA
+    DETECT_ULCERS: '/api/detect-ulcers',
+    CLASSIFY_REGIONS: '/api/classify-regions',
   }
 };
 

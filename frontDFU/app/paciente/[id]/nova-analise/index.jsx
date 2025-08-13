@@ -13,6 +13,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useLocalSearchParams, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import API_CONFIG, { buildURL } from '../../../../config/api';
+import { getFirebaseToken } from '../../../../config/firebase';
 
 export default function NovaAnaliseIndex() {
   const { id: pacienteId } = useLocalSearchParams();
@@ -68,7 +69,26 @@ export default function NovaAnaliseIndex() {
     setIsProcessing(true);
 
     try {
-      // ⭐ PREPARAR FORMDATA CORRETAMENTE
+      console.log('🚀 Iniciando detecção de úlceras...');
+      console.log('📁 URI da imagem:', originalImageUri);
+
+      // ⭐ USAR API_CONFIG.BASE_URL (não .env)
+      console.log('🌐 BASE_URL:', API_CONFIG.BASE_URL);
+
+      // ⭐ TESTAR CONECTIVIDADE
+      try {
+        const testResponse = await fetch(API_CONFIG.BASE_URL);
+        console.log('🧪 Teste conectividade:', testResponse.status);
+      } catch (testError) {
+        console.error('🧪 Falha no teste:', testError.message);
+        throw new Error(`Backend indisponível: ${testError.message}`);
+      }
+
+      // ⭐ OBTER TOKEN FIREBASE
+      const token = await getFirebaseToken();
+      console.log('🔑 Token obtido:', token ? 'SIM' : 'NÃO');
+
+      // ⭐ PREPARAR FORMDATA
       const formData = new FormData();
       formData.append('file', {
         uri: originalImageUri,
@@ -76,48 +96,100 @@ export default function NovaAnaliseIndex() {
         name: 'ulcera_original.jpg',
       });
 
-      const response = await fetch(
-        buildURL(API_CONFIG.ENDPOINTS.DETECT_ULCERS),
-        {
-          method: 'POST',
-          body: formData,
-          headers: {
-            'Content-Type': 'multipart/form-data',
-          },
-        }
-      );
+      // ⭐ CONSTRUIR URL CORRETAMENTE
+      const url = buildURL(API_CONFIG.ENDPOINTS.DETECT_ULCERS);
+      console.log('🌐 URL final:', url);
+
+      console.log('📤 Enviando requisição...');
+
+      // ⭐ FAZER REQUISIÇÃO
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: {
+          ...(token && { 'Authorization': `Bearer ${token}` })
+        },
+        body: formData,
+      });
+
+      console.log('📊 Status da resposta:', response.status);
 
       if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
+        const errorText = await response.text().catch(() => 'Erro desconhecido');
+        console.error('❌ Erro HTTP:', errorText);
+        throw new Error(`Erro na API: ${response.status} - ${errorText}`);
       }
 
       const data = await response.json();
+      console.log('✅ Dados recebidos:', data);
 
-      // ⭐ VERIFICAR ESTRUTURA CORRETA
-      if (data.success && data.imagem_redimensionada && data.boxes) {
-        console.log(`✅ Detectadas ${data.boxes.length} regiões`);
+      // ⭐ PROCESSAR RESPOSTA
+      if (data.success) {
+        if (data.imagem_redimensionada && data.boxes && data.boxes.length > 0) {
+          console.log(`✅ Detectadas ${data.boxes.length} regiões`);
 
-        router.push({
-          pathname: `/paciente/${pacienteId}/nova-analise/edit-regions`,
-          params: {
-            id: pacienteId,
-            imageBase64: data.imagem_redimensionada,
-            boxes: JSON.stringify(data.boxes),
-            imageInfo: JSON.stringify(data.dimensoes),
-            originalUri: originalImageUri,
-          },
-        });
+          router.push({
+            pathname: `/paciente/${pacienteId}/nova-analise/edit-regions`,
+            params: {
+              id: pacienteId,
+              imageBase64: data.imagem_redimensionada,
+              boxes: JSON.stringify(data.boxes),
+              imageInfo: JSON.stringify(data.dimensoes || {}),
+              originalUri: originalImageUri,
+            },
+          });
+        } else {
+          console.log('⚠️ Nenhuma úlcera detectada');
+          Alert.alert(
+            'Resultado',
+            'Nenhuma úlcera foi detectada na imagem.',
+            [
+              { text: 'Nova Foto', onPress: () => setOriginalImageUri(null) },
+              {
+                text: 'Prosseguir Mesmo Assim', onPress: () => {
+                  router.push({
+                    pathname: `/paciente/${pacienteId}/nova-analise/edit-regions`,
+                    params: {
+                      id: pacienteId,
+                      imageBase64: '',
+                      boxes: JSON.stringify([]),
+                      imageInfo: JSON.stringify({}),
+                      originalUri: originalImageUri,
+                    },
+                  });
+                }
+              }
+            ]
+          );
+        }
       } else {
         throw new Error(data.message || 'Falha na detecção de úlceras');
       }
 
     } catch (error) {
-      console.error('Erro na detecção:', error);
+      console.error('❌ Erro detalhado na detecção:', {
+        message: error.message,
+        name: error.name
+      });
+
+      // ⭐ MENSAGENS DE ERRO ESPECÍFICAS
+      let errorMessage = 'Erro desconhecido';
+
+      if (error.message.includes('Network request failed')) {
+        errorMessage = 'Sem conexão com a internet ou servidor indisponível';
+      } else if (error.message.includes('timeout')) {
+        errorMessage = 'Tempo limite esgotado - tente novamente';
+      } else if (error.message.includes('Backend indisponível')) {
+        errorMessage = 'Servidor principal indisponível';
+      } else {
+        errorMessage = error.message;
+      }
+
       Alert.alert(
         'Erro na Detecção',
-        'Não foi possível detectar úlceras na imagem. Tente novamente.',
+        errorMessage,
         [
-          { text: 'Tentar Novamente', onPress: () => setOriginalImageUri(null) },
+          { text: 'Tentar Novamente', onPress: () => handleDetectUlcers() },
+          { text: 'Nova Foto', onPress: () => setOriginalImageUri(null) },
           { text: 'Cancelar', onPress: () => router.back() }
         ]
       );

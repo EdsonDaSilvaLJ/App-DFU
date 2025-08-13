@@ -21,9 +21,9 @@ const port = process.env.PORT || 3000;
 
 // ⭐ MIDDLEWARES PRIMEIRO - ORDEM CRÍTICA
 app.use(cors({
-  origin: '*', // Para desenvolvimento
-  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+    origin: '*', // Para desenvolvimento
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
 }));
 
 app.use(express.json({ limit: '50mb' })); // ⭐ ANTES DAS ROTAS
@@ -31,19 +31,19 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // Log middleware para debug
 app.use((req, res, next) => {
-  console.log(`📡 ${req.method} ${req.path}`);
-  console.log('📦 Body:', req.body ? 'Presente' : 'Ausente');
-  console.log('🔑 Auth:', req.headers.authorization ? 'Presente' : 'Ausente');
-  next();
+    console.log(`📡 ${req.method} ${req.path}`);
+    console.log('📦 Body:', req.body ? 'Presente' : 'Ausente');
+    console.log('🔑 Auth:', req.headers.authorization ? 'Presente' : 'Ausente');
+    next();
 });
 
 // Teste Firebase
 console.log('🔥 Testando Firebase Admin...');
 try {
-  const authService = admin.auth();
-  console.log('✅ Firebase Admin funcionando:', typeof authService);
+    const authService = admin.auth();
+    console.log('✅ Firebase Admin funcionando:', typeof authService);
 } catch (error) {
-  console.error('❌ Firebase Admin com erro:', error.message);
+    console.error('❌ Firebase Admin com erro:', error.message);
 }
 
 
@@ -108,50 +108,100 @@ app.get('/health', (req, res) => {
 // ENDPOINT DETECTAR
 app.post('/api/detect-ulcers', upload.single('file'), async (req, res) => {
     try {
-        if (!req.file) {
-            return res.status(400).json({
+        console.log('🔍 === DEBUG COMPLETO ===');
+        console.log('PYTHON_API_URL env var:', process.env.PYTHON_API_URL);
+        console.log('PYTHON_API_BASE_URL const:', PYTHON_API_BASE_URL);
+        console.log('Arquivo recebido:', req.file ? 'SIM' : 'NÃO');
+
+        // ⭐ VERIFICAR SE A VARIÁVEL ESTÁ DEFINIDA
+        if (!PYTHON_API_BASE_URL) {
+            console.error('❌ PYTHON_API_BASE_URL é undefined!');
+            console.log('Todas as env vars:', Object.keys(process.env));
+            return res.status(500).json({
                 success: false,
-                message: 'Nenhuma imagem foi enviada'
+                message: 'PYTHON_API_URL não está configurada',
+                debug: {
+                    PYTHON_API_URL: process.env.PYTHON_API_URL,
+                    allEnvKeys: Object.keys(process.env).filter(k => k.includes('PYTHON'))
+                }
             });
         }
 
-        console.log('--- Etapa 1: Detecção de Úlceras ---');
-        console.log(`📤 Enviando imagem para detecção...`);
-
-        const formDetection = new FormData();
-        formDetection.append('file', stream.Readable.from(req.file.buffer), {
-            filename: req.file.originalname || 'ulcera.jpg',
-            contentType: req.file.mimetype || 'image/jpeg'
-        });
-
         const urlDetection = `${PYTHON_API_BASE_URL}/predict/detection`;
-        const responseDetection = await axios.post(urlDetection, formDetection, {
-            headers: formDetection.getHeaders(),
-            timeout: 60000 // 60 segundos para IA
+        console.log('🌐 URL montada:', urlDetection);
+
+        // ⭐ TESTAR A URL ANTES DE USAR (COM FETCH)
+        try {
+            console.log('🧪 Testando conectividade com server-py...');
+            const testResponse = await fetch(PYTHON_API_BASE_URL);
+            console.log('🧪 Teste de conectividade:', testResponse.status);
+
+            if (!testResponse.ok) {
+                throw new Error(`HTTP ${testResponse.status}`);
+            }
+        } catch (testError) {
+            console.error('🧪 Falha no teste de conectividade:', testError.message);
+            return res.status(500).json({
+                success: false,
+                message: 'Server-py indisponível',
+                debug: {
+                    url: PYTHON_API_BASE_URL,
+                    error: testError.message
+                }
+            });
+        }
+
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                message: 'Nenhum arquivo enviado'
+            });
+        }
+
+        console.log('📤 Enviando para server-py...');
+
+        const formData = new FormData();
+        formData.append('file', req.file.buffer, {
+            filename: req.file.originalname,
+            contentType: req.file.mimetype,
         });
 
-        console.log(`✅ Detecção concluída. Encontradas ${responseDetection.data.deteccoes.length} regiões.`);
+        console.log('🔗 Fazendo fetch para:', urlDetection);
 
-        // ⭐ CONVERTER IMAGEM PARA BASE64 E RETORNAR NO FORMATO ESPERADO
-        const imageBase64 = req.file.buffer.toString('base64');
+        const response = await fetch(urlDetection, {
+            method: 'POST',
+            body: formData,
+            headers: formData.getHeaders()
+        });
+
+        console.log('📊 Status da resposta:', response.status);
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('❌ Erro do server-py:', errorText);
+            throw new Error(`Server-py retornou ${response.status}: ${errorText}`);
+        }
+
+        const responseData = await response.json();
+        console.log('✅ Dados recebidos do server-py');
 
         res.json({
             success: true,
-            message: 'Detecção realizada com sucesso',
-            imagem_redimensionada: imageBase64,
-            boxes: responseDetection.data.deteccoes,
-            dimensoes: {
-                width: responseDetection.data.info_redimensionamento?.original_size?.width || 640,
-                height: responseDetection.data.info_redimensionamento?.original_size?.height || 640
-            },
-            timestamp: new Date().toISOString()
+            ...responseData
         });
 
     } catch (error) {
-        console.error('❌ Erro na detecção:', error.message);
+        console.error('❌ ERRO COMPLETO:', {
+            message: error.message,
+            stack: error.stack
+        });
+
         res.status(500).json({
             success: false,
-            message: error.message || 'Erro na detecção de úlceras'
+            message: error.message,
+            debug: {
+                PYTHON_API_BASE_URL: PYTHON_API_BASE_URL || 'undefined'
+            }
         });
     }
 });
@@ -242,12 +292,12 @@ function criarSubimagem(imageBase64, regiao) {
 
 app.post('/api/save-analysis', express.json(), async (req, res) => {
     try {
-        const { 
+        const {
             medico_id,  // UID do Firebase
-            paciente_id, 
-            imagem_original, 
-            regioes_analisadas, 
-            diagnostico_geral 
+            paciente_id,
+            imagem_original,
+            regioes_analisadas,
+            diagnostico_geral
         } = req.body;
 
         if (!medico_id || !paciente_id || !diagnostico_geral || !imagem_original) {
@@ -258,7 +308,7 @@ app.post('/api/save-analysis', express.json(), async (req, res) => {
         }
 
         console.log('--- Etapa 3: Salvando Análise ---');
-        
+
         // ⭐ BUSCAR MÉDICO PELO UID DO FIREBASE
         const medico = await Profissional.findOne({ firebaseUid: medico_id });
         if (!medico) {
@@ -269,7 +319,7 @@ app.post('/api/save-analysis', express.json(), async (req, res) => {
         }
 
         // ⭐ VERIFICAR SE PACIENTE PERTENCE AO MÉDICO
-        const paciente = await Paciente.findOne({ 
+        const paciente = await Paciente.findOne({
             _id: paciente_id,
             medicoId: medico._id
         });
@@ -310,7 +360,7 @@ app.post('/api/save-analysis', express.json(), async (req, res) => {
         // ⭐ UPLOAD DA IMAGEM PARA FIREBASE STORAGE
         const imageBuffer = Buffer.from(imagem_original, 'base64');
         const file = bucket.file(`analises/${nomeArquivo}`);
-        
+
         const stream = file.createWriteStream({
             metadata: {
                 contentType: 'image/jpeg',
@@ -378,7 +428,7 @@ app.post('/api/save-analysis', express.json(), async (req, res) => {
 
     } catch (error) {
         console.error('❌ Erro ao salvar análise:', error.message);
-        
+
         // ⭐ CLEANUP: Se houve erro, tentar deletar análise incompleta
         if (error.analiseId) {
             try {
@@ -400,7 +450,7 @@ app.post('/api/save-analysis', express.json(), async (req, res) => {
 app.get('/analises/:id', async (req, res) => {
     try {
         const { id } = req.params;
-        
+
         if (!mongoose.Types.ObjectId.isValid(id)) {
             return res.status(400).json({
                 success: false,
