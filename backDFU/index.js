@@ -335,6 +335,16 @@ function criarSubimagem(imageBase64, regiao) {
 
 app.post('/api/save-analysis', express.json(), async (req, res) => {
     try {
+
+                // ⭐ NOVA VERIFICAÇÃO DE SEGURANÇA
+        if (!bucket) {
+            console.error('❌ Ação bloqueada: Firebase Storage bucket não está inicializado.');
+            return res.status(503).json({
+                success: false,
+                message: 'O serviço de armazenamento de arquivos está indisponível. Contate o suporte.'
+            });
+        }
+
         const {
             medico_id,
             paciente_id,
