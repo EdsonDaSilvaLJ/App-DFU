@@ -20,6 +20,8 @@ from pathlib import Path
 import requests
 import zipfile
 import re
+import base64
+import io
 
 # Configuração de logging
 logging.basicConfig(level=logging.INFO)
@@ -134,6 +136,8 @@ async def baixar_google_drive_direto(file_id: str, destino: Path, descricao: str
             continue
     
     return False
+
+
 
 async def baixar_arquivo(url: str, destino: Path, descricao: str = "arquivo"):
     """Baixa um arquivo de uma URL com estratégias múltiplas"""
@@ -482,7 +486,8 @@ async def health_check():
 async def predict_detection(file: UploadFile = File(...)):
     """
     Endpoint para detecção de objetos.
-    Recebe uma imagem e retorna uma lista de detecções (boxes, classes, confianças).
+    Recebe uma imagem, retorna uma lista de detecções (boxes, classes, confianças),
+    a imagem redimensionada em base64 e as informações de redimensionamento.
     """
     if modelo_yolo is None:
         raise HTTPException(status_code=503, detail="Modelo YOLO não carregado")
@@ -500,10 +505,14 @@ async def predict_detection(file: UploadFile = File(...)):
         # Processa os resultados para obter a lista de detecções
         deteccoes = processar_deteccoes_yolo(results)
         
-        # Retorna a lista de detecções e as informações de redimensionamento
+        # Converte a imagem redimensionada para base64
+        imagem_base64 = image_to_base64(img_resized)
+
+        # Retorna a resposta no formato esperado pelo frontend
         return JSONResponse(content={
-            "deteccoes": deteccoes,
-            "info_redimensionamento": resize_info
+            "boxes": deteccoes,                 # <-- RENOMEADO de "deteccoes" para "boxes"
+            "dimensoes": resize_info,           # <-- RENOMEADO de "info_redimensionamento"
+            "imagem_redimensionada": imagem_base64  # <-- ADICIONADO este campo crucial
         })
     
     except Exception as e:
