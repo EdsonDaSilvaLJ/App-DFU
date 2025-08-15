@@ -21,7 +21,7 @@ const BoxSchema = new Schema({
 const analiseSchema = new Schema({
   medicoId:         { type: Schema.Types.ObjectId, ref: 'Profissional', required: true, index: true },
   pacienteId:       { type: Schema.Types.ObjectId, ref: 'Paciente',     required: true, index: true },
-  originalImageUrl: { type: String, required: true },               // URL da foto no Firebase Storage
+  originalImageUrl: { type: String, required: false, default: '' },               // URL da foto no Firebase Storage
   boxes:            { type: [BoxSchema], required: true },          // array com cada subimagem e classificação
   imageDiagnosis:   { type: String, required: true }                // diagnóstico/observação geral obrigatório
 }, {

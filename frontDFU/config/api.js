@@ -11,6 +11,7 @@ const API_CONFIG = {
     // ⭐ ADICIONAR ENDPOINTS DA IA
     DETECT_ULCERS: '/api/detect-ulcers',
     CLASSIFY_REGIONS: '/api/classify-regions',
+    SAVE_ANALYSIS: '/api/save-analysis',
   }
 };
 

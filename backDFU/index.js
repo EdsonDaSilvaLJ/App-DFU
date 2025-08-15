@@ -336,7 +336,7 @@ function criarSubimagem(imageBase64, regiao) {
 app.post('/api/save-analysis', express.json(), async (req, res) => {
     try {
         const {
-            medico_id,  // UID do Firebase
+            medico_id,
             paciente_id,
             imagem_original,
             regioes_analisadas,
@@ -373,34 +373,12 @@ app.post('/api/save-analysis', express.json(), async (req, res) => {
             });
         }
 
-        // ⭐ CRIAR NOVA ANÁLISE COM ObjectId CORRETO
-        const novaAnalise = new Analise({
-            medicoId: medico._id,        // ✅ ObjectId do MongoDB
-            pacienteId: paciente_id,     // ✅ ObjectId do MongoDB
-            originalImageUrl: '',        // Será preenchido após upload
-            boxes: (regioes_analisadas || []).map(regiao => ({
-                xMin: regiao.coordenadas?.xmin || 0,
-                yMin: regiao.coordenadas?.ymin || 0,
-                xMax: regiao.coordenadas?.xmax || 0,
-                yMax: regiao.coordenadas?.ymax || 0,
-                classification: {
-                    label: regiao.classificacao_ia?.classe || 'Não classificado',
-                    confidence: regiao.classificacao_ia?.confianca || 0
-                },
-                diagnosis: regiao.diagnostico_medico || ''
-            })),
-            imageDiagnosis: diagnostico_geral
-        });
-
-        // ⭐ SALVAR PARA GERAR O _id
-        await novaAnalise.save();
-        console.log(`📝 Análise criada no MongoDB com ID: ${novaAnalise._id}`);
-
-        // ⭐ GERAR NOME DO ARQUIVO (usando ObjectIds do MongoDB)
-        const nomeArquivo = `${medico._id}_${paciente_id}_${novaAnalise._id}.jpg`;
+        // ⭐ GERAR ID TEMPORÁRIO PARA O ARQUIVO
+        const tempAnaliseId = new mongoose.Types.ObjectId();
+        const nomeArquivo = `${medico._id}_${paciente_id}_${tempAnaliseId}.jpg`;
         console.log(`📤 Fazendo upload da imagem: ${nomeArquivo}`);
 
-        // ⭐ UPLOAD DA IMAGEM PARA FIREBASE STORAGE
+        // ⭐ UPLOAD DA IMAGEM PRIMEIRO
         const imageBuffer = Buffer.from(imagem_original, 'base64');
         const file = bucket.file(`analises/${nomeArquivo}`);
 
@@ -411,7 +389,7 @@ app.post('/api/save-analysis', express.json(), async (req, res) => {
                     medicoId: medico._id.toString(),
                     medicoFirebaseUid: medico_id,
                     pacienteId: paciente_id,
-                    analiseId: novaAnalise._id.toString(),
+                    analiseId: tempAnaliseId.toString(),
                     uploadDate: new Date().toISOString()
                 }
             }
@@ -426,7 +404,6 @@ app.post('/api/save-analysis', express.json(), async (req, res) => {
 
             stream.on('finish', async () => {
                 try {
-                    // ⭐ TORNAR O ARQUIVO PÚBLICO E OBTER URL
                     await file.makePublic();
                     const publicUrl = `https://storage.googleapis.com/${bucket.name}/analises/${nomeArquivo}`;
                     console.log(`✅ Upload concluído: ${publicUrl}`);
@@ -444,9 +421,29 @@ app.post('/api/save-analysis', express.json(), async (req, res) => {
         // ⭐ AGUARDAR UPLOAD COMPLETAR
         const firebaseUrl = await uploadPromise;
 
-        // ⭐ ATUALIZAR ANÁLISE COM URL DA IMAGEM
-        novaAnalise.originalImageUrl = firebaseUrl;
+        // ⭐ AGORA CRIAR ANÁLISE COM URL COMPLETA
+        const novaAnalise = new Analise({
+            _id: tempAnaliseId,           // ⭐ USAR O ID GERADO
+            medicoId: medico._id,
+            pacienteId: paciente_id,
+            originalImageUrl: firebaseUrl, // ⭐ JÁ COM URL COMPLETA
+            boxes: (regioes_analisadas || []).map(regiao => ({
+                xMin: regiao.coordenadas?.xmin || 0,
+                yMin: regiao.coordenadas?.ymin || 0,
+                xMax: regiao.coordenadas?.xmax || 0,
+                yMax: regiao.coordenadas?.ymax || 0,
+                classification: {
+                    label: regiao.classificacao_ia?.classe || 'Não classificado',
+                    confidence: regiao.classificacao_ia?.confianca || 0
+                },
+                diagnosis: regiao.diagnostico_medico || ''
+            })),
+            imageDiagnosis: diagnostico_geral
+        });
+
+        // ⭐ SALVAR ANÁLISE COMPLETA
         await novaAnalise.save();
+        console.log(`📝 Análise criada no MongoDB com ID: ${novaAnalise._id}`);
 
         console.log(`✅ Análise completa salva para paciente ${paciente.nome}`);
         console.log(`🔗 URL da imagem: ${firebaseUrl}`);
@@ -471,16 +468,6 @@ app.post('/api/save-analysis', express.json(), async (req, res) => {
 
     } catch (error) {
         console.error('❌ Erro ao salvar análise:', error.message);
-
-        // ⭐ CLEANUP: Se houve erro, tentar deletar análise incompleta
-        if (error.analiseId) {
-            try {
-                await Analise.findByIdAndDelete(error.analiseId);
-                console.log('🧹 Análise incompleta removida do MongoDB');
-            } catch (cleanupError) {
-                console.error('❌ Erro no cleanup:', cleanupError.message);
-            }
-        }
 
         res.status(500).json({
             success: false,
