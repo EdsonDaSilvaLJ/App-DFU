@@ -2,7 +2,7 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const express = require('express');
 const multer = require('multer'); // Para upload de arquivos
-const { admin, bucket } = require('./config/firebase');
+const { admin, getBucket } = require('./config/firebase');
 const MONGO_URI = process.env.MONGO_URI;
 
 // Módulos para requisições HTTP e manipulação de arquivos
@@ -335,6 +335,7 @@ function criarSubimagem(imageBase64, regiao) {
 app.post('/api/save-analysis', express.json(), async (req, res) => {
     try {
 
+         const bucket = getBucket(); // <-- Chame a função para obter a instância do bucket
                 // ⭐ NOVA VERIFICAÇÃO DE SEGURANÇA
         if (!bucket) {
             console.error('❌ Ação bloqueada: Firebase Storage bucket não está inicializado.');

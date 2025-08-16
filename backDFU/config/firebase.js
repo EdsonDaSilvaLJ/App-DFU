@@ -1,52 +1,58 @@
-// backDFU/config/firebase.js - USAR VARIÁVEIS DE AMBIENTE
+// --- Início do arquivo: config/firebase.js (VERSÃO FINAL SIMPLIFICADA) ---
 
 const admin = require('firebase-admin');
+
+// Carrega as variáveis de ambiente, garantindo que estejam disponíveis
 require('dotenv').config();
 
-if (!admin.apps.length) {
-    try {
-        console.log('🔧 Inicializando Firebase Admin...');
-        
-        // ⭐ USAR VARIÁVEIS DE AMBIENTE EM VEZ DO ARQUIVO JSON
-        const serviceAccount = {
-            type: process.env.FIREBASE_TYPE,
-            project_id: process.env.FIREBASE_PROJECT_ID,
-            private_key_id: process.env.FIREBASE_PRIVATE_KEY_ID,
-            private_key: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
-            client_email: process.env.FIREBASE_CLIENT_EMAIL,
-            client_id: process.env.FIREBASE_CLIENT_ID,
-            auth_uri: process.env.FIREBASE_AUTH_URI,
-            token_uri: process.env.FIREBASE_TOKEN_URI,
-            auth_provider_x509_cert_url: process.env.FIREBASE_AUTH_PROVIDER_X509_CERT_URL,
-            client_x509_cert_url: process.env.FIREBASE_CLIENT_X509_CERT_URL,
-            universe_domain: process.env.FIREBASE_UNIVERSE_DOMAIN
-        };
-        
-        // ⭐ VERIFICAR SE TODAS AS VARIÁVEIS ESTÃO PRESENTES
-        const requiredVars = ['FIREBASE_PROJECT_ID', 'FIREBASE_PRIVATE_KEY', 'FIREBASE_CLIENT_EMAIL'];
-        const missingVars = requiredVars.filter(varName => !process.env[varName]);
-        
-        if (missingVars.length > 0) {
-            throw new Error(`Variáveis Firebase ausentes: ${missingVars.join(', ')}`);
-        }
-        
-        admin.initializeApp({
-            credential: admin.credential.cert(serviceAccount),
-            projectId: process.env.FIREBASE_PROJECT_ID,
-            storageBucket: `${process.env.FIREBASE_PROJECT_ID}.appspot.com`
-        });
-        
-        console.log('✅ Firebase Admin inicializado com variáveis de ambiente');
-        
-    } catch (error) {
-        console.error('❌ Erro ao inicializar Firebase Admin:', error);
-        throw error;
-    }
+let serviceAccount;
+let storageBucketUrl;
+
+// Verifica a variável de credenciais em Base64
+if (process.env.FIREBASE_CREDENTIALS_BASE64) {
+  try {
+    const decodedJson = Buffer.from(process.env.FIREBASE_CREDENTIALS_BASE64, 'base64').toString('utf-8');
+    serviceAccount = JSON.parse(decodedJson);
+    console.log('✅ Credenciais do Firebase decodificadas com sucesso.');
+  } catch (error) {
+    console.error('❌ ERRO CRÍTICO: Falha ao decodificar FIREBASE_CREDENTIALS_BASE64. Verifique o valor no Railway.', error.message);
+    // Encerra a aplicação se as credenciais estiverem corrompidas. Sem elas, nada funciona.
+    process.exit(1);
+  }
+} else {
+  console.error('❌ ERRO CRÍTICO: A variável de ambiente FIREBASE_CREDENTIALS_BASE64 é obrigatória e não foi encontrada.');
+  process.exit(1);
 }
 
-const bucket = admin.storage().bucket();
+// Verifica a variável do Storage Bucket
+if (process.env.FIREBASE_STORAGE_BUCKET) {
+    storageBucketUrl = process.env.FIREBASE_STORAGE_BUCKET;
+    console.log(`📦 Usando Firebase Storage Bucket: ${storageBucketUrl}`);
+} else {
+    console.error('❌ ERRO CRÍTICO: A variável de ambiente FIREBASE_STORAGE_BUCKET é obrigatória e não foi encontrada.');
+    process.exit(1);
+}
 
+
+// Inicializa o app do Firebase. Node.js garante que este bloco só rode uma vez.
+try {
+  admin.initializeApp({
+    credential: admin.credential.cert(serviceAccount),
+    storageBucket: storageBucketUrl
+  });
+  console.log('✅ Firebase Admin SDK inicializado com sucesso.');
+} catch (error) {
+  // O SDK pode lançar um erro se já estiver inicializado, o que é ok.
+  if (error.code !== 'app/duplicate-app') {
+    console.error('❌ Falha catastrófica ao inicializar o Firebase Admin SDK:', error);
+    process.exit(1);
+  } else {
+    console.log('⚠️ Firebase Admin SDK já estava inicializado.');
+  }
+}
+
+// Exporta o admin e uma função para obter o bucket de forma segura
 module.exports = {
     admin,
-    bucket
+    getBucket: () => admin.storage().bucket()
 };
