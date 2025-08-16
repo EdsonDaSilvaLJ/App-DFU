@@ -2,8 +2,7 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const express = require('express');
 const multer = require('multer'); // Para upload de arquivos
-const { bucket } = require('./config/firebase');
-const admin = require('./config/firebase');
+const { admin, bucket } = require('./config/firebase');
 const MONGO_URI = process.env.MONGO_URI;
 
 // Módulos para requisições HTTP e manipulação de arquivos
